@@ -1,6 +1,8 @@
 import os
 import shutil
 import subprocess
+from subprocess import CalledProcessError
+
 import sys
 
 from setuptools import find_packages, setup
@@ -12,10 +14,11 @@ from setuptools.command.install_lib import install_lib as _install_lib
 
 try:
     import git  # from GitPython
+    import cryptography
 except:
     try:
         print("[INFO] GitPython not found. Installing...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "gitpython"])
+        subprocess.check_call(["pip", "install", "gitpython", "cryptography"])
         import git
     except:
         print(
@@ -24,12 +27,13 @@ except:
         sys.exit(1)
 
 SUPPORTED_DEVICES = ["cpu", "gpu", "ascend", "cambricon", "bi", "metax", "kunlunxin", "musa"]
+SUPPORTED_BACKENDS = ["llama.cpp", "Megatron-LM", "sglang", "vllm", "Megatron-Energon"]
 VLLM_UNPATCH_DEVICES = ["ascend", "cambricon", "bi", "metax", "kunlunxin"]
 
 
 def _check_backend(backend):
-    if backend not in ["llama.cpp", "Megatron-LM", "sglang", "vllm", "Megatron-Energon"]:
-        raise ValueError(f"Invalid backend {backend}.")
+    if backend not in SUPPORTED_BACKENDS:
+        raise ValueError(f"Invalid backend {backend}. Supported backends are {SUPPORTED_BACKENDS}.")
 
 
 def check_backends(backends):
@@ -54,6 +58,21 @@ def check_device(device):
             return
     if not is_supported:
         raise ValueError(f"Unsupported device {device}. Supported devices are {SUPPORTED_DEVICES}.")
+
+
+def _run_stream(cmd, cwd=None, env=None, prefix="[install]"):
+    """
+    以流式方式将子进程 stdout/stderr 同步到父进程，确保实时输出。
+    """
+    cmd_str = " ".join(cmd) if isinstance(cmd, (list, tuple)) else str(cmd)
+    print(f"{prefix} $ {cmd_str}")
+    try:
+        # 不设置 stdout/stderr，直接继承父进程终端，保证同步输出
+        result = subprocess.run(cmd, cwd=cwd, env=env, check=True)
+        return result.returncode
+    except CalledProcessError as e:
+        print(f"{prefix} command failed (code {e.returncode}): {cmd_str}")
+        raise
 
 
 # Call for the extensions
@@ -87,11 +106,7 @@ def _build_vllm(device):
             f'{env.get("LD_LIBRARY_PATH", "")}'
         )
         env["VLLM_INSTALL_PUNICA_KERNELS"] = "1"
-    subprocess.check_call(
-        [sys.executable, '-m', 'pip', 'install', '.', '--no-build-isolation', '--verbose'],
-        cwd=vllm_path,
-        env=env,
-    )
+    _run_stream(["uv", "pip", "install", ".", "--no-build-isolation", "--verbose"], cwd=vllm_path, env=env, prefix="[build_ext]")
 
 
 def _build_sglang(device):
@@ -101,18 +116,10 @@ def _build_sglang(device):
         sglang_path = os.path.join(
             os.path.dirname(__file__), "build", device, "FlagScale", "third_party", "sglang"
         )
-    subprocess.check_call(
-        [
-            sys.executable,
-            '-m',
-            'pip',
-            'install',
-            '-e',
-            'python[all]',
-            '--no-build-isolation',
-            '--verbose',
-        ],
+    _run_stream(
+        ["uv", "pip", "install", "-e", "python[all]", "--no-build-isolation", "--verbose"],
         cwd=sglang_path,
+        prefix="[build_ext]",
     )
 
 
@@ -147,13 +154,13 @@ def _build_megatron_energon(device):
         try:
             print("[INFO] hatchling not found. Installing...")
             subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "hatchling", "--no-build-isolation"]
+                ["uv", "pip", "install", "hatchling", "--no-build-isolation"]
             )
             subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "hatch-vcs", "--no-build-isolation"]
+                ["uv", "pip", "install", "hatch-vcs", "--no-build-isolation"]
             )
             subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "editables", "--no-build-isolation"]
+                ["uv", "pip", "install", "editables", "--no-build-isolation"]
             )
             import editables
             import hatch_vcs
@@ -162,10 +169,7 @@ def _build_megatron_energon(device):
             print("[ERROR] Failed to install hatchling, hatch-vcs and editables.")
             sys.exit(1)
     energon_path = os.path.join(os.path.dirname(__file__), "third_party", "Megatron-Energon")
-    subprocess.check_call(
-        [sys.executable, '-m', 'pip', 'install', '-e', '.', '--no-build-isolation', '--verbose'],
-        cwd=energon_path,
-    )
+    _run_stream(["uv", "pip", "install", "-e", ".", "--no-build-isolation", "--verbose"], cwd=energon_path, prefix="[build_ext]")
 
 
 class FlagScaleBuild(_build):
@@ -205,7 +209,12 @@ class FlagScaleBuild(_build):
             print(f"[build] No backend specified, just build FlagScale python codes.")
 
     def run(self):
+        print("111111", self.backend)
+        # self.backend = ["Megatron-LM"]
+        # self.device = "gpu"
         if self.backend is not None:
+            build_install_cmd = FlagScaleInstall(backend=self.backend, device=self.device)
+
             build_py_cmd = self.get_finalized_command('build_py')
             build_py_cmd.backend = self.backend
             build_py_cmd.device = self.device
@@ -215,7 +224,9 @@ class FlagScaleBuild(_build):
             build_ext_cmd.backend = self.backend
             build_ext_cmd.device = self.device
             build_ext_cmd.ensure_finalized()
-
+           
+            build_install_cmd.run()
+            # self.run_command('install_requirements')
             self.run_command('build_py')
             self.run_command('build_ext')
         super().run()
@@ -445,6 +456,19 @@ class FlagScaleBuildExt(_build_ext):
                 if backend == "FlagScale":
                     continue
                 elif backend == "vllm":
+                    # 在构建 vllm 之前安装其依赖
+                    if self.device == "gpu":
+                        main_path = os.path.dirname(__file__)
+                        vllm_req_dir = os.path.join(main_path, "third_party", "vllm", "requirements")
+                        if os.path.exists(vllm_req_dir):
+                            print("[build_ext] Installing vllm build dependencies...")
+                            req_files = ["build.txt", "cuda.txt", "common.txt", "dev.txt"]
+                            for req_file in req_files:
+                                req_path = os.path.join(vllm_req_dir, req_file)
+                                if os.path.exists(req_path):
+                                    _run_stream(["uv", "pip", "install", "-r", req_path], prefix="[build_ext]")
+                            # 安装 mamba
+                            _run_stream(["uv", "pip", "install", "git+https://github.com/state-spaces/mamba.git@v2.2.4"], prefix="[build_ext]")
                     _build_vllm(self.device)
                 elif backend == "sglang":
                     _build_sglang(self.device)
@@ -464,14 +488,258 @@ class FlagScaleBuildExt(_build_ext):
         super().run()
 
 
+def _determine_env_type(backends):
+    """根据 backend 判断是 train 还是 inference 环境"""
+    train_backends = ["Megatron-LM", "Megatron-Energon"]
+    inference_backends = ["vllm", "sglang", "llama.cpp"]
+    
+    has_train = any(b in train_backends for b in backends)
+    has_inference = any(b in inference_backends for b in backends)
+    
+    if has_train and has_inference:
+        return "both"  # 需要安装 train 和 inference 的依赖
+    elif has_train:
+        return "train"
+    elif has_inference:
+        return "inference"
+    else:
+        return None  # 没有指定 backend，不安装额外依赖
+
+
+def _read_requirements(file_path):
+    """读取 requirements 文件为列表（忽略注释与空行）"""
+    reqs = []
+    if not os.path.exists(file_path):
+        return reqs
+    with open(file_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            reqs.append(line)
+    return reqs
+
+
+def _install_heavy_dependencies(env_type, device, main_path):
+    """安装复杂依赖（按需执行）：torch/cuDNN/TE/flash-attn/apex 等"""
+    import tempfile
+
+    if device == "gpu" and env_type in ["train", "both", "inference"]:
+        # PyTorch + deepspeed
+        try:
+            _run_stream([
+                "uv", "pip", "install",
+                "torch==2.7.1+cu128", "torchaudio==2.7.1+cu128", "torchvision==0.22.1+cu128",
+                "--extra-index-url", "https://download.pytorch.org/whl/cu128"
+            ])
+            _run_stream(["uv", "pip", "install", "deepspeed"])
+        except Exception as e:
+            print(f"[install] Warning: Torch installation failed/skipped: {e}")
+
+    if device == "gpu" and env_type in ["train", "both"]:
+        # TransformerEngine
+        try:
+            print("[install] Installing TransformerEngine...")
+            with tempfile.TemporaryDirectory() as tmpdir:
+                te_path = os.path.join(tmpdir, "TransformerEngine")
+                subprocess.check_call([
+                    "git", "clone", "--recursive", "https://github.com/NVIDIA/TransformerEngine.git", te_path
+                ])
+                subprocess.check_call(["git", "checkout", "e9a5fa4e"], cwd=te_path)
+                _run_stream(["uv", "pip", "install", "."], cwd=te_path)
+        except Exception as e:
+            print(f"[install] Warning: TransformerEngine install skipped: {e}")
+
+        # cuDNN frontend
+        try:
+            print("[install] Installing cuDNN frontend...")
+            _run_stream(["uv", "pip", "install", "nvidia-cudnn-cu12==9.7.1.26"])
+            env = os.environ.copy()
+            env["CMAKE_ARGS"] = "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
+            _run_stream(["pip", "install", "--no-build-isolation ", "nvidia-cudnn-frontend"], env=env)
+        except Exception as e:
+            print(f"[install] Warning: cuDNN frontend install skipped: {e}")
+
+        # flash-attn（尽力安装）
+        try:
+            print("[install] Installing flash-attention (best-effort)...")
+            nvcc_output = subprocess.check_output(["nvcc", "--version"], stderr=subprocess.STDOUT).decode()
+            cu_match = None
+            for line in nvcc_output.split('\n'):
+                if "Cuda compilation tools" in line:
+                    cu_match = line.split()[4]
+                    break
+            if cu_match:
+                cu = cu_match.split('.')[0]
+                torch_output = subprocess.check_output(["uv", "pip", "show", "torch"]).decode()
+                torch_version = None
+                for line in torch_output.split('\n'):
+                    if line.startswith("Version:"):
+                        torch_version = line.split()[1].split('+')[0]
+                        break
+                if torch_version:
+                    torch_v = '.'.join(torch_version.split('.')[:2])
+                    python_version = f"{sys.version_info.major}{sys.version_info.minor}"
+                    try:
+                        gxx_output = subprocess.check_output(["g++", "--version"]).decode()
+                        gxx_version = gxx_output.split('\n')[0].split()[-1].split('.')[0]
+                    except:
+                        gxx_version = "11"
+                    flash_attn_version = "2.8.0.post2"
+                    wheel_name = f"flash_attn-{flash_attn_version}+cu{cu}torch{torch_v}cxx{gxx_version}abiFALSE-cp{python_version}-cp{python_version}-linux_x86_64.whl"
+                    wheel_url = f"https://github.com/Dao-AILab/flash-attention/releases/download/v{flash_attn_version}/{wheel_name}"
+                    with tempfile.TemporaryDirectory() as tmpdir:
+                        wheel_path = os.path.join(tmpdir, wheel_name)
+                        subprocess.check_call([
+                            "wget", "--continue", "--timeout=60", "--no-check-certificate",
+                            "--tries=5", "--waitretry=10", wheel_url, "-O", wheel_path
+                        ])
+                        _run_stream(["uv", "pip", "install", "--no-cache-dir", wheel_path])
+                    _run_stream([
+                        "uv", "pip", "install", "--no-build-isolation",
+                        "git+https://github.com/Dao-AILab/flash-attention.git@v2.7.2#egg=flashattn-hopper&subdirectory=hopper"
+                    ])
+                    python_path = subprocess.check_output([
+                        sys.executable, "-c", "import site; print(site.getsitepackages()[0])"
+                    ]).decode().strip()
+                    hopper_path = os.path.join(python_path, "flashattn_hopper")
+                    os.makedirs(hopper_path, exist_ok=True)
+                    subprocess.check_call([
+                        "wget", "-P", hopper_path,
+                        "https://raw.githubusercontent.com/Dao-AILab/flash-attention/v2.7.2/hopper/flash_attn_interface.py"
+                    ])
+        except Exception as e:
+            print(f"[install] Warning: flash-attention install skipped: {e}")
+
+        # apex
+        try:
+            print("[install] Installing apex...")
+            with tempfile.TemporaryDirectory() as tmpdir:
+                apex_path = os.path.join(tmpdir, "apex")
+                subprocess.check_call(["git", "clone", "https://github.com/NVIDIA/apex", apex_path])
+                _run_stream([
+                    "pip", "install", "-v", "--disable-pip-version-check",
+                    "--no-cache-dir", "--no-build-isolation",
+                    "--config-settings=--build-option=--cpp_ext",
+                    "--config-settings=--build-option=--cuda_ext",
+                    "."
+                ], cwd=apex_path)
+        except Exception as e:
+            print(f"[install] Warning: apex install skipped: {e}")
+
+
+        _fix_torch_elastic()
+
+
+def _fix_torch_elastic():
+    """修复 torch distributed elastic 的自动容错功能"""
+    try:
+        import torch
+        torch_version = torch.__version__
+        site_packages = subprocess.check_output([
+            sys.executable, "-c", "import site; print(site.getsitepackages()[0])"
+        ]).decode().strip()
+        file_path = os.path.join(site_packages, "torch", "distributed", "elastic", "agent", "server", "api.py")
+        
+        if not os.path.exists(file_path):
+            return
+        
+        if "2.5.1" in torch_version:
+            # 修复 2.5.1 版本
+            with open(file_path, 'r') as f:
+                lines = f.readlines()
+            
+            if len(lines) >= 893:
+                if 'if num_nodes_waiting > 0:' in lines[892]:
+                    lines[892] = '                if num_nodes_waiting > 0 and self._remaining_restarts > 0:\n'
+                if len(lines) >= 902 and 'self._restart_workers(self._worker_group)' in lines[901]:
+                    lines[901] = '                    self._remaining_restarts -= 1; self._restart_workers(self._worker_group)\n'
+                    with open(file_path, 'w') as f:
+                        f.writelines(lines)
+        
+        elif "2.6.0" in torch_version or "2.7.0" in torch_version or "2.7.1" in torch_version:
+            # 修复 2.6.0/2.7.0/2.7.1 版本
+            with open(file_path, 'r') as f:
+                lines = f.readlines()
+            
+            if len(lines) >= 908:
+                if 'if num_nodes_waiting > 0:' in lines[907]:
+                    lines[907] = '                if num_nodes_waiting > 0 and self._remaining_restarts > 0:\n'
+                if len(lines) >= 917 and 'self._restart_workers(self._worker_group)' in lines[916]:
+                    lines[916] = '                    self._remaining_restarts -= 1; self._restart_workers(self._worker_group)\n'
+                    with open(file_path, 'w') as f:
+                        f.writelines(lines)
+    except Exception as e:
+        print(f"[install] Warning: Failed to fix torch elastic: {e}")
+
+
+class FlagScaleInstall:
+    """
+    安装 FlagScale 及其依赖
+    """
+    
+    def __init__(self, backend=None, device=None, skip_deps=False):
+        self.backend = backend
+        self.device = device
+        self.skip_deps = skip_deps
+    
+    def run(self):
+        # 在 build 之前安装依赖（轻依赖通过 extras，重依赖通过脚本）
+        print(1111111111111)
+        if not self.skip_deps and self.backend:
+            env_type = _determine_env_type(self.backend)
+
+            main_path = os.path.dirname(__file__)
+            # 轻依赖：读取 requirements 作为 extras 列表并安装
+            base_reqs = os.path.join(main_path, "requirements", "requirements-base.txt")
+            common_reqs = os.path.join(main_path, "requirements", "requirements-common.txt")
+            train_reqs = os.path.join(main_path, "requirements", "train", "requirements.txt")
+            inference_reqs = os.path.join(main_path, "requirements", "inference", "requirements.txt")
+            serving_reqs = os.path.join(main_path, "requirements", "serving", "requirements.txt")
+            megatron_cuda_reqs = os.path.join(main_path, "requirements", "train", "megatron", "requirements-cuda.txt")
+            print(f"[install] Detected environment type: {env_type}, device: {self.device}, backends: {self.backend}")
+            # 始终先升级 pip
+            _run_stream(["uv", "pip", "install", "--upgrade", "pip"])
+
+            # 安装通用轻依赖
+            if env_type in ["train", "inference", "both"]:
+                print(f"[install] Installing base pip dependencies ({base_reqs}) before build...")
+                _run_stream(["uv", "pip", "install", "-r", base_reqs, "--verbose"])
+                _run_stream(["pip", "install", "-r", common_reqs, "--verbose"])
+
+            if env_type in ["train", "both"]:
+                print(f"[install] Installing training pip dependencies ({train_reqs}) before build...")
+                _run_stream(["uv", "pip", "install", "-r", train_reqs, "--verbose"])
+                if self.device == "gpu":
+                    _run_stream(["uv", "pip", "install", "--no-build-isolation", "-r", megatron_cuda_reqs, "--verbose"])
+
+            if env_type in ["inference", "both"]:
+                print(f"[install] Installing inference pip dependencies ({inference_reqs}) before build...")
+                _run_stream(["uv", "pip", "install", "-r", inference_reqs, "--verbose"])
+                if self.device == "gpu":
+                    _run_stream(["uv", "pip", "install", "-r", serving_reqs, "--verbose"])
+
+    
+
+            # 安装复杂依赖
+            print(f"[install] Installing heavy pip dependencies before build... ,env_type={env_type}")
+            import time
+            time.sleep(10)
+            _install_heavy_dependencies(env_type, self.device, main_path)
+            # _fix_torch_elastic()
+            # 公共：安装 FlagGems
+            try:
+                _run_stream(["uv", "pip", "install", "--no-build-isolation", "git+https://github.com/FlagOpen/FlagGems.git@release_v1.0.0"])
+            except Exception as e:
+                print(f"[install] Warning: FlagGems install skipped: {e}")
+
+
 class FlagScaleInstallLib(_install_lib):
     def run(self):
         build_py_cmd = self.get_finalized_command("build_py")
         backend = getattr(build_py_cmd, "backend", None)
         print(f"[install_lib] Got backends from build_py: {backend}")
         super().run()
-
-        raise ValueError(self.install_dir)
 
 
 from version import FLAGSCALE_VERSION

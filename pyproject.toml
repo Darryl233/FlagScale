@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=77.0", "wheel", "gitpython"]
+requires = ["setuptools>=77.0", "wheel", "gitpython", "cryptography", "pyyaml"]
 build-backend = "build_backend.flagscale_build_backend"
 
 [tool.black]
@@ -18,3 +18,8 @@ known_local_folder = ["flagscale"]
 known_first_party = ["megatron", "vllm"]
 sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 default_section = "THIRDPARTY"
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
+verbose = true
