@@ -60,31 +60,9 @@ def _is_in_build_isolation():
 _using_no_build_isolation = not _is_in_build_isolation()
 
 if _using_no_build_isolation:
-    print("[INFO] Detected --no-build-isolation flag, installing base and common requirements...")
-    
-    # Install base requirements
-    base_requirements = _read_requirements_file('requirements/requirements-base.txt')
-    if base_requirements:
-        print(f"[INFO] Installing {len(base_requirements)} packages from requirements-base.txt...")
-        try:
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install"] + base_requirements,
-                stdout=subprocess.DEVNULL,  
-            )
-        except subprocess.CalledProcessError as e:
-            print(f"[WARNING] Failed to install some base requirements: {e}")
-    
-    # Install common requirements
-    common_requirements = _read_requirements_file('requirements/requirements-common.txt')
-    if common_requirements:
-        print(f"[INFO] Installing {len(common_requirements)} packages from requirements-common.txt...")
-        try:
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install"] + common_requirements,
-                stdout=subprocess.DEVNULL, 
-            )
-        except subprocess.CalledProcessError as e:
-            print(f"[WARNING] Failed to install some common requirements: {e}")
+    build_sys_requires = ["setuptools>=77.0", "wheel", "gitpython", "pyyaml", "cryptography", "pip", "hatchling", "hatch-vcs", "editables"]
+    install_cmd = [sys.executable, "-m", "pip", "install"] + build_sys_requires
+    subprocess.check_call(install_cmd)
 else:
     raise ValueError("Not in an isolated environment, please use --no-build-isolation flag.")
 
@@ -244,6 +222,7 @@ class FlagScaleBuild(_build):
         super().initialize_options()
         self.backend = None
         self.device = None
+        self.extras_to_install = []  # List of extra names to install
 
     def finalize_options(self):
         super().finalize_options()
@@ -251,6 +230,29 @@ class FlagScaleBuild(_build):
             self.backend = os.environ.get("FLAGSCALE_BACKEND")
         if self.device is None:
             self.device = os.environ.get("FLAGSCALE_DEVICE", "gpu")
+        
+        # Check if we need to install extra dependencies based on backend-device combination
+        # Check before normalize_backend, as it may change the backend value
+        self.extras_to_install = []
+        if self.backend and self.device:
+            # Get available extras from distribution
+            if hasattr(self.distribution, 'extras_require') and self.distribution.extras_require:
+                available_extras = self.distribution.extras_require.keys()
+                
+                # Handle multiple backends (comma-separated)
+                original_backends = [b.strip() for b in self.backend.split(",")]
+                
+                for backend in original_backends:
+                    # Construct extra name as <backend>-<device>
+                    extra_name = f"{backend.lower()}-{self.device.lower()}"
+                    
+                    # Check if this extra exists in extras_require
+                    if extra_name in available_extras:
+                        self.extras_to_install.append(extra_name)
+                        print(f"[build] Detected backend={backend} and device={self.device}, will install {extra_name} extra dependencies")
+                    else:
+                        print(f"[build] No extra '{extra_name}' found in extras_require, skipping")
+        
         if self.backend is not None:
             # Set the environment variables for backends and device to use in the install command
             # os.environ["FLAGSCALE_BACKEND"] = self.backend
@@ -274,6 +276,44 @@ class FlagScaleBuild(_build):
             print(f"[build] No backend specified, just build FlagScale python codes.")
 
     def run(self):
+        # Install extra dependencies if needed
+        if self.extras_to_install:
+            if hasattr(self.distribution, 'extras_require') and self.distribution.extras_require:
+                all_deps_to_install = []
+                
+                for extra_name in self.extras_to_install:
+                    if extra_name in self.distribution.extras_require:
+                        deps = self.distribution.extras_require[extra_name]
+                        if deps:
+                            print(f"[build] Found {extra_name} extra with {len(deps)} dependencies")
+                            all_deps_to_install.extend(deps)
+                        else:
+                            print(f"[build] Warning: {extra_name} extra has no dependencies defined")
+                    else:
+                        print(f"[build] Warning: {extra_name} extra not found in extras_require")
+                
+                if all_deps_to_install:
+                    # Remove duplicates while preserving order
+                    seen = set()
+                    unique_deps = []
+                    for dep in all_deps_to_install:
+                        if dep not in seen:
+                            seen.add(dep)
+                            unique_deps.append(dep)
+                    
+                    print(f"[build] Installing {len(unique_deps)} unique dependencies from extras: {self.extras_to_install}")
+                    install_cmd = [sys.executable, "-m", "pip", "install"] + unique_deps
+                    try:
+                        subprocess.check_call(install_cmd)
+                        print(f"[build] Successfully installed dependencies from extras: {self.extras_to_install}")
+                    except subprocess.CalledProcessError as e:
+                        print(f"[build] Warning: Failed to install some dependencies from extras {self.extras_to_install}: {e}")
+                        # Continue build even if some dependencies fail to install
+                else:
+                    print(f"[build] No dependencies to install from extras: {self.extras_to_install}")
+            else:
+                print(f"[build] Warning: distribution has no extras_require defined")
+        
         if self.backend is not None:
             build_py_cmd = self.get_finalized_command('build_py')
             build_py_cmd.backend = self.backend
@@ -617,6 +657,8 @@ setup(
         "flag_scale.examples": ["**/*"],
         "flag_scale.tools": ["**/*"],
         "flag_scale.tests": ["**/*"],
+        "flag_scale": ["third_party/Megatron-LM/**/*"],  # TODO: remove this after megatron-lm-fl is published
+
     },
     install_requires=_get_install_requires(),
     extras_require=_get_extras_require(),
