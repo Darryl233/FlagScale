@@ -1,5 +1,5 @@
-git+https://github.com/Dao-AILab/causal-conv1d.git@v1.2.2.post1
-git+https://github.com/fanshiqing/grouped_gemm@v1.1.2
+causal-conv1d @ git+https://github.com/Dao-AILab/causal-conv1d.git@v1.2.2.post1
+grouped-gemm @ git+https://github.com/fanshiqing/grouped_gemm@v1.1.2
 av
 boto3
 braceexpand
@@ -12,3 +12,4 @@ pandas
 s3fs
 transformers==4.51.0
 webdataset
+regex
