@@ -33,7 +33,7 @@ def _is_in_build_isolation():
 _using_no_build_isolation = not _is_in_build_isolation()
 if _using_no_build_isolation:
     print(f"[build] Using no build isolation, installing build system dependencies...")
-    build_sys_requires = ["setuptools>=77.0", "wheel", "gitpython", "pyyaml", "cryptography", "pip", "hatchling", "hatch-vcs", "editables", "pybind11==2.13.6"]
+    build_sys_requires = ["setuptools>=77.0", "wheel", "gitpython", "pyyaml", "cryptography", "pip", "hatchling", "hatch-vcs", "editables", "pybind11==2.13.6", "torch==2.7.1"]
     install_cmd = [sys.executable, "-m", "pip", "install"] + build_sys_requires
     subprocess.check_call(install_cmd)
 else:
@@ -350,12 +350,10 @@ def _get_extras_require():
 
         # vllm
         'vllm-gpu': _read_requirements_files([
-            'requirements/inference/vllm/requirements.txt',
             *inference_common_deps,
             *serving_common_deps,
         ]),
         'vllm-metax': _read_requirements_files([
-            'requirements/inference/vllm/requirements.txt',
             *inference_common_deps,
             *serving_common_deps,
         ]),
