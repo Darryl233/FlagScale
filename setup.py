@@ -29,13 +29,50 @@ def _is_in_build_isolation():
         pass
     return False
 
+def _get_cuda_tag():
+    """获取 CUDA 标签，如 cu128"""
+    try:
+        result = subprocess.run(['nvcc', '--version'], capture_output=True, text=True)
+        if result.returncode == 0:
+            # 从 "Cuda compilation tools, release 12.8, V12.8.93" 提取版本号
+            import re
+            match = re.search(r'release (\d+)\.(\d+)', result.stdout)
+            if match:
+                major, minor = match.groups()
+                return f"cu{major}{minor}"
+    except FileNotFoundError:
+        pass
+    return None
+
+
 # If not in an isolated environment, it means that --no-build-isolation is used
 _using_no_build_isolation = not _is_in_build_isolation()
 if _using_no_build_isolation:
     print(f"[build] Using no build isolation, installing build system dependencies...")
-    build_sys_requires = ["setuptools>=77.0", "wheel", "gitpython", "pyyaml", "cryptography", "pip", "hatchling", "hatch-vcs", "editables", "pybind11==2.13.6", "torch==2.7.1"]
+    build_sys_requires = ["setuptools>=77.0", "wheel", "gitpython", "pyyaml", "cryptography", "pip", "hatchling", "hatch-vcs", "editables", "pybind11==2.13.6"]
     install_cmd = [sys.executable, "-m", "pip", "install"] + build_sys_requires
     subprocess.check_call(install_cmd)
+    
+    # 根据系统 CUDA 版本安装对应的 torch
+    cuda_tag = _get_cuda_tag()
+    
+    if cuda_tag:
+        print(f"[build] Detected CUDA tag: {cuda_tag}")
+        install_torch_cmd = [
+            sys.executable, "-m", "pip", "install",
+            f"torch==2.7.1+{cuda_tag}",
+            f"torchvision==0.22.1+{cuda_tag}",
+            f"torchaudio==2.7.1+{cuda_tag}",
+            "--extra-index-url", f"https://download.pytorch.org/whl/{cuda_tag}"
+        ]
+    else:
+        print(f"[build] CUDA not detected, installing CPU version of torch")
+        install_torch_cmd = [
+            sys.executable, "-m", "pip", "install",
+            "torch==2.7.1", "torchvision==0.22.1", "torchaudio==2.7.1"
+        ]
+    
+    subprocess.check_call(install_torch_cmd)
 else:
     raise ValueError("Not in an isolated environment, please use --no-build-isolation flag.")
 
