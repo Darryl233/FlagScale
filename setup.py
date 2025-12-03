@@ -359,6 +359,12 @@ def _get_extras_require():
             *inference_common_deps,
             *serving_common_deps,
         ]),
+
+        # megatron
+        'megatron-gpu': _read_requirements_files([
+            'requirements/train/megatron/requirements-cuda.txt',
+            *train_common_deps,
+        ]),
     }
 
 
