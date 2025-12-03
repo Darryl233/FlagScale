@@ -247,6 +247,8 @@ def _install_from_whl(backend, device):
                 [sys.executable, "-m", "pip", "install", ks3_path, "--no-build-isolation", "--verbose"]
             )
             click.echo(f"Successfully installed {backend} from whl package.")
+    else:
+        raise ValueError(f"No compatible versions found for {backend} on {device}.")
 
 
 def get_valid_backends_subsets(config_path):
@@ -505,10 +507,11 @@ def install(backend=None, domain=None, device="gpu", version=None, from_source=F
         device = "metax"
 
     backends = backend.split(",")
-    if domain == "robotics":
-        backends = ["Megatron-LM", "Megatron-Energon"]
-    else:
-        raise ValueError(f"Unsupported domain: {domain}")
+    if domain:
+        if domain == "robotics":
+            backends = ["Megatron-LM", "Megatron-Energon"]
+        else:
+            raise ValueError(f"Unsupported domain: {domain}")
 
     # Try to install from whl first unless --from-source is specified
     for backend in backends:
