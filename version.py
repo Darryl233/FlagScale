@@ -61,8 +61,6 @@ def _get_whl_version_gpu(backend):
             if version.endswith(suffix):
                 compatible_versions.append(version)
         return versions, compatible_versions
-    elif backend == "robotics":
-        pass
     else:
         raise NotImplementedError(f"Unsupported backend: {backend}")
 
