@@ -60,9 +60,9 @@ if _using_no_build_isolation:
         print(f"[build] Detected CUDA tag: {cuda_tag}")
         install_torch_cmd = [
             sys.executable, "-m", "pip", "install",
-            f"torch==2.7.1+{cuda_tag}",
-            f"torchvision==0.22.1+{cuda_tag}",
-            f"torchaudio==2.7.1+{cuda_tag}",
+            f"torch",
+            f"torchvision",
+            f"torchaudio",
             "--extra-index-url", f"https://download.pytorch.org/whl/{cuda_tag}"
         ]
     else:
