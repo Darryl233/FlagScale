@@ -198,6 +198,7 @@ def build_vllm(device, root_dir):
         )
         env["VLLM_INSTALL_PUNICA_KERNELS"] = "1"
     try:
+        env["MAX_JOBS"] = os.environ.get("MAX_JOBS", 32)
         run_subprocess_with_error_capture(
             [sys.executable, '-m', 'pip', 'install', '.', '--no-build-isolation', '--verbose'],
             cwd=vllm_path,
