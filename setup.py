@@ -10,6 +10,11 @@ from setuptools.command.build_py import build_py as _build_py
 from setuptools._distutils._log import log
 from setuptools.command.install_lib import install_lib as _install_lib
 
+TORCH_CUDA_VERSION_MAP = {
+    "cu128": "torch==2.7.1",
+    "cu124": "torch==2.5.1"
+}
+
 def _is_in_build_isolation():
     """Check if in the pip build isolation environment"""
     for path in sys.path:
@@ -52,27 +57,6 @@ if _using_no_build_isolation:
     build_sys_requires = ["setuptools>=77.0", "wheel", "gitpython", "pyyaml", "cryptography", "pip", "hatchling", "hatch-vcs", "editables", "pybind11==2.13.6"]
     install_cmd = [sys.executable, "-m", "pip", "install"] + build_sys_requires
     subprocess.check_call(install_cmd)
-    
-    # 根据系统 CUDA 版本安装对应的 torch
-    cuda_tag = _get_cuda_tag()
-    
-    if cuda_tag:
-        print(f"[build] Detected CUDA tag: {cuda_tag}")
-        install_torch_cmd = [
-            sys.executable, "-m", "pip", "install",
-            f"torch",
-            f"torchvision",
-            f"torchaudio",
-            "--extra-index-url", f"https://download.pytorch.org/whl/{cuda_tag}"
-        ]
-    else:
-        print(f"[build] CUDA not detected, installing CPU version of torch")
-        install_torch_cmd = [
-            sys.executable, "-m", "pip", "install",
-            "torch==2.7.1", "torchvision==0.22.1", "torchaudio==2.7.1"
-        ]
-    
-    subprocess.check_call(install_torch_cmd)
 else:
     raise ValueError("Not in an isolated environment, please use --no-build-isolation flag.")
 
@@ -226,8 +210,31 @@ class FlagScaleBuild(_build):
             print(f"[build] Warning: distribution has no extras_require defined")
 
 
+    def install_torch(self, device: str):
+        if device == "gpu":
+            cuda_tag = _get_cuda_tag()
+            
+            if cuda_tag:
+                print(f"[build] Detected CUDA tag: {cuda_tag}")
+                install_torch_cmd = [
+                    sys.executable, "-m", "pip", "install",
+                    TORCH_CUDA_VERSION_MAP[cuda_tag],
+                    f"torchvision",
+                    f"torchaudio",
+                    "--extra-index-url", f"https://download.pytorch.org/whl/{cuda_tag}"
+                ]
+            else:
+                print(f"[build] CUDA not detected, installing CPU version of torch")
+                install_torch_cmd = [
+                    sys.executable, "-m", "pip", "install",
+                    "torch==2.7.1", "torchvision==0.22.1", "torchaudio==2.7.1"
+                ]
+            
+            subprocess.check_call(install_torch_cmd)
+
     def run(self):
         self.install_extras()
+        self.install_torch(self.device)
         if self.backend is not None:
             build_py_cmd = self.get_finalized_command('build_py')
             build_py_cmd.backend = self.backend
