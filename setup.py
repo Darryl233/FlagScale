@@ -167,12 +167,33 @@ class FlagScaleBuild(_build):
         else:
             print(f"[build] No backend specified, just build FlagScale python codes.")
 
+    def install_torch(self, device: str):
+        if device == "gpu":
+            cuda_tag = _get_cuda_tag()
+            
+            if cuda_tag:
+                print(f"[build] Detected CUDA tag: {cuda_tag}")
+                install_torch_cmd = [
+                    sys.executable, "-m", "pip", "install",
+                    f"{TORCH_CUDA_VERSION_MAP[cuda_tag]}",
+                    f"torchvision",
+                    f"torchaudio",
+                    "--index-url", f"https://download.pytorch.org/whl/{cuda_tag}"
+                ]
+            else:
+                print(f"[build] CUDA not detected, installing CPU version of torch")
+                install_torch_cmd = [
+                    sys.executable, "-m", "pip", "install",
+                    "torch==2.7.1", "torchvision==0.22.1", "torchaudio==2.7.1"
+                ]
+            
+            subprocess.check_call(install_torch_cmd)   
         
     def install_extras(self):
         """Install extra requirements from extras_require"""
         if not self.extras_to_install:
             return
-
+        log.info(f"[build] Installing extras: {self.extras_to_install}")
         if hasattr(self.distribution, 'extras_require') and self.distribution.extras_require:
             all_deps_to_install = []
             
@@ -180,12 +201,12 @@ class FlagScaleBuild(_build):
                 if extra_name in self.distribution.extras_require:
                     deps = self.distribution.extras_require[extra_name]
                     if deps:
-                        print(f"[build] Found {extra_name} extra with {len(deps)} dependencies")
+                        log.info(f"[build] Found {extra_name} extra with {len(deps)} dependencies")
                         all_deps_to_install.extend(deps)
                     else:
-                        print(f"[build] Warning: {extra_name} extra has no dependencies defined")
+                        log.info(f"[build] Warning: {extra_name} extra has no dependencies defined")
                 else:
-                    print(f"[build] Warning: {extra_name} extra not found in extras_require")
+                    log.info(f"[build] Warning: {extra_name} extra not found in extras_require")
             
             if all_deps_to_install:
                 # Remove duplicates while preserving order
@@ -195,46 +216,23 @@ class FlagScaleBuild(_build):
                     if dep not in seen:
                         seen.add(dep)
                         unique_deps.append(dep)
-                
-                print(f"[build] Installing {len(unique_deps)} unique dependencies from extras: {self.extras_to_install}")
-                install_cmd = [sys.executable, "-m", "pip", "install"] + unique_deps
+                log.info(f"[build] Unique dependencies: {unique_deps}")
+                log.info(f"[build] Installing {len(unique_deps)} unique dependencies from extras: {self.extras_to_install}")
+                install_cmd = [sys.executable, "-m", "pip", "install", "--verbose", "--no-build-isolation"] + unique_deps
                 try:
                     subprocess.check_call(install_cmd)
-                    print(f"[build] Successfully installed dependencies from extras: {self.extras_to_install}")
+                    log.info(f"[build] Successfully installed dependencies from extras: {self.extras_to_install}")
                 except subprocess.CalledProcessError as e:
-                    print(f"[build] Warning: Failed to install some dependencies from extras {self.extras_to_install}: {e}")
+                    log.info(f"[build] Warning: Failed to install some dependencies from extras {self.extras_to_install}: {e}")
                     # Continue build even if some dependencies fail to install
             else:
-                print(f"[build] No dependencies to install from extras: {self.extras_to_install}")
+                log.info(f"[build] No dependencies to install from extras: {self.extras_to_install}")
         else:
-            print(f"[build] Warning: distribution has no extras_require defined")
-
-
-    def install_torch(self, device: str):
-        if device == "gpu":
-            cuda_tag = _get_cuda_tag()
-            
-            if cuda_tag:
-                print(f"[build] Detected CUDA tag: {cuda_tag}")
-                install_torch_cmd = [
-                    sys.executable, "-m", "pip", "install",
-                    TORCH_CUDA_VERSION_MAP[cuda_tag],
-                    f"torchvision",
-                    f"torchaudio",
-                    "--extra-index-url", f"https://download.pytorch.org/whl/{cuda_tag}"
-                ]
-            else:
-                print(f"[build] CUDA not detected, installing CPU version of torch")
-                install_torch_cmd = [
-                    sys.executable, "-m", "pip", "install",
-                    "torch==2.7.1", "torchvision==0.22.1", "torchaudio==2.7.1"
-                ]
-            
-            subprocess.check_call(install_torch_cmd)
+            log.info(f"[build] Warning: distribution has no extras_require defined")
 
     def run(self):
-        self.install_extras()
         self.install_torch(self.device)
+        self.install_extras()
         if self.backend is not None:
             build_py_cmd = self.get_finalized_command('build_py')
             build_py_cmd.backend = self.backend
@@ -360,9 +358,6 @@ def _get_install_requires():
         "setuptools>=77.0.0",
         "packaging>=24.2",
         "importlib_metadata>=8.5.0",
-        "torch==2.7.1", 
-        "torchaudio==2.7.1",
-        "torchvision==0.22.1",
     ]
     
     all_deps = install_requires + core_deps
