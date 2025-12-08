@@ -8,6 +8,21 @@ from tools.patch.unpatch import unpatch, apply_hardware_patch
 SUPPORTED_DEVICES = ["cpu", "gpu", "ascend", "cambricon", "bi", "metax", "kunlunxin", "musa"]
 VLLM_UNPATCH_DEVICES = ["ascend", "cambricon", "bi", "metax", "kunlunxin"]
 
+def _get_cuda_tag():
+    """获取 CUDA 标签，如 cu128"""
+    try:
+        result = subprocess.run(['nvcc', '--version'], capture_output=True, text=True)
+        if result.returncode == 0:
+            # 从 "Cuda compilation tools, release 12.8, V12.8.93" 提取版本号
+            import re
+            match = re.search(r'release (\d+)\.(\d+)', result.stdout)
+            if match:
+                major, minor = match.groups()
+                return f"cu{major}{minor}"
+    except FileNotFoundError:
+        pass
+    return None
+
 
 def run_subprocess_with_error_capture(cmd, cwd=None, env=None, description="Command", log_file=None):
     """
@@ -176,6 +191,7 @@ def build_vllm(device, root_dir):
         )
     # Set env
     env = os.environ.copy()
+    print(f"[builder] Environment: {env}")
     if "metax" in device.lower():
         if "MACA_PATH" not in env:
             env["MACA_PATH"] = "/opt/maca"
@@ -198,9 +214,16 @@ def build_vllm(device, root_dir):
         )
         env["VLLM_INSTALL_PUNICA_KERNELS"] = "1"
     try:
-        env["MAX_JOBS"] = os.environ.get("MAX_JOBS", 32)
+        env["MAX_JOBS"] = str(os.environ.get("MAX_JOBS", 32))
+        # prevent incompatible torch version when building vllm
         run_subprocess_with_error_capture(
-            [sys.executable, '-m', 'pip', 'install', '.', '--no-build-isolation', '--verbose'],
+            [sys.executable, '-m', 'pip', 'install', 'torch==2.8.0', 'torchvision==0.23.0', 'torchaudio==2.8.0', '--extra-index-url', f'https://download.pytorch.org/whl/{_get_cuda_tag()}'],
+            cwd=vllm_path,
+            env=env,
+            description="vllm build"
+        )
+        run_subprocess_with_error_capture(
+            [sys.executable, '-m', 'pip', 'install', '.', '--verbose'],
             cwd=vllm_path,
             env=env,
             description="vllm build"

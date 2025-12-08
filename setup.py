@@ -167,8 +167,8 @@ class FlagScaleBuild(_build):
         else:
             print(f"[build] No backend specified, just build FlagScale python codes.")
 
-    def install_torch(self, device: str):
-        if device == "gpu":
+    def install_torch(self):
+        if self.device == "gpu":
             cuda_tag = _get_cuda_tag()
             
             if cuda_tag:
@@ -178,7 +178,7 @@ class FlagScaleBuild(_build):
                     f"{TORCH_CUDA_VERSION_MAP[cuda_tag]}",
                     f"torchvision",
                     f"torchaudio",
-                    "--index-url", f"https://download.pytorch.org/whl/{cuda_tag}"
+                    "--extra-index-url", f"https://download.pytorch.org/whl/{cuda_tag}"
                 ]
             else:
                 print(f"[build] CUDA not detected, installing CPU version of torch")
@@ -231,7 +231,7 @@ class FlagScaleBuild(_build):
             log.info(f"[build] Warning: distribution has no extras_require defined")
 
     def run(self):
-        self.install_torch(self.device)
+        self.install_torch()
         self.install_extras()
         if self.backend is not None:
             build_py_cmd = self.get_finalized_command('build_py')
@@ -362,6 +362,8 @@ def _get_install_requires():
     
     all_deps = install_requires + core_deps
     result = deduplicate_dependencies(all_deps)
+    log.info(f"[build] install_requires Unique dependencies: {result}")
+
     return result
 
 
