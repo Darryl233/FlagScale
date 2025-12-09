@@ -129,36 +129,95 @@ We recommend using the latest release of [NGC's PyTorch container](https://catal
 FlagScale provides a unified runner for various tasks, including training，inference and serve. Simply specify the configuration file to run the task with a single command. The runner will automatically load the configurations and execute the task. The following example demonstrates how to run a distributed training task.
 
 #### Train
+1. Prepare dataset demo:
 
-1. Start the distributed training job:
+    We provide a small processed data ([bin](https://model.ks3-cn-beijing.ksyuncs.com/nlpdata/pile_wikipedia_demo.bin) and [idx](https://model.ks3-cn-beijing.ksyuncs.com/nlpdata/pile_wikipedia_demo.idx)) from the [Pile](https://pile.eleuther.ai/) dataset.
+    ```
+    mkdir -p /path/to/data && cd /path/to/data
+    wget https://model.ks3-cn-beijing.ksyuncs.com/nlpdata/pile_wikipedia_demo.idx
+    wget https://model.ks3-cn-beijing.ksyuncs.com/nlpdata/pile_wikipedia_demo.bin
+    ```
+2. Edit config:
+
+    Modify the data path in ./examples/aquila/conf/train/7b.yaml
+    ```yaml
+    data:
+        data_path: /path/to/data/pile_wikipedia_demo # modify data path here
+        split: 1
+        tokenizer:
+            legacy_tokenizer: true
+            tokenizer_type: AquTokenizerFS
+            vocab_file: ./examples/aquila/tokenizer/vocab.json
+            merge_file: ./examples/aquila/tokenizer/merges.txt
+            special_tokens_file: ./examples/aquila/tokenizer/special_tokens.txt
+            vocab_size: 100008
+    ```
+
+
+
+3. Start the distributed training job:
     ```sh
     python run.py --config-path ./examples/aquila/conf --config-name train action=run
     ```
-    The `data_path` in the demo is the path of the training datasets following the [Megatron-LM format](./megatron/README.md#data-preprocessing). For quickly running the pretraining process, we also provide a small processed data ([bin](https://model.ks3-cn-beijing.ksyuncs.com/nlpdata/pile_wikipedia_demo.bin) and [idx](https://model.ks3-cn-beijing.ksyuncs.com/nlpdata/pile_wikipedia_demo.idx)) from the [Pile](https://pile.eleuther.ai/) dataset.
 
-2. Stop the distributed training job:
+
+4. Stop the distributed training job:
     ```sh
     python run.py --config-path ./examples/aquila/conf --config-name train action=stop
     ```
 
 #### Inference
+1. Prepare model
+    ```sh
+    modelscope download --model BAAI/Aquila-7B README.md --local_dir ./
+    ```
+2. Edit config
 
-1. Start inference:
+    FlagScale/examples/aquila/conf/inference/7b.yaml
+    ```yaml
+    llm:
+        model: /workspace/models/BAAI/Aquila-7B         # modify path here
+        tokenizer: /workspace/models/BAAI/Aquila-7B     # modify path here
+        trust_remote_code: true
+        tensor_parallel_size: 1
+        pipeline_parallel_size: 1
+        gpu_memory_utilization: 0.5
+        seed: 1234
+
+    ```
+
+3. Start inference:
     ```sh
     python run.py --config-path ./examples/aquila/conf --config-name inference action=run
     ```
     
 #### Serve
+1. Download Tokenzier
+    ```sh
+    mkdir -p /models/physical-intelligence/
+    cd /models/physical-intelligence/
+    git lfs install
+    git clone https://huggingface.co/physical-intelligence/fast
+    ```
 
-1. Start the server:
+2. Edit Config
+
+    ./examples/robobrain_x0/conf/serve/robobrain_x0.yaml
+
+    Change 3 fields:
+    - engine_args.model_sub_task -> /models/BAAI/RoboBrain-X0-Preview
+    - engine_args.port -> A port available in your env, for example: 5001
+    - engine_args.tokenizer_path ->/models/physical-intelligence/fast
+
+3. Start the server:
     ```sh
-    python run.py --config-path ./examples/qwen/conf --config-name serve action=run
+    python run.py --config-path ./examples/robobrain_x0/conf --config-name serve action=run
     ```
-2. Stop the server:
+4. Stop the server:
     ```sh
-    python run.py --config-path ./examples/qwen/conf --config-name serve action=stop
+    python run.py --config-path ./examples/robobrain_x0/conf --config-name serve action=stop
     ```
-For more details, please refer to [Quick Start](./flagscale/serve/README.md).
+
 
 ### 🧱 DeepSeek-R1 Serving <a name="deepseek-r1-serving"></a>
 
