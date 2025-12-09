@@ -10,11 +10,11 @@ SUPPORTED_DEVICES = ["cpu", "gpu", "ascend", "cambricon", "bi", "metax", "kunlun
 VLLM_UNPATCH_DEVICES = ["ascend", "cambricon", "bi", "metax", "kunlunxin"]
 
 def _get_cuda_tag():
-    """获取 CUDA 标签，如 cu128"""
+    """get CUDA tag, e.g. cu128"""
     try:
         result = subprocess.run(['nvcc', '--version'], capture_output=True, text=True)
         if result.returncode == 0:
-            # 从 "Cuda compilation tools, release 12.8, V12.8.93" 提取版本号
+            # extract version from "Cuda compilation tools, release 12.8, V12.8.93"
             import re
             match = re.search(r'release (\d+)\.(\d+)', result.stdout)
             if match:

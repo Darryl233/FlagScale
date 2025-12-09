@@ -30,21 +30,6 @@ def _is_in_build_isolation():
         pass
     return False
 
-def _get_cuda_tag():
-    """获取 CUDA 标签，如 cu128"""
-    try:
-        result = subprocess.run(['nvcc', '--version'], capture_output=True, text=True)
-        if result.returncode == 0:
-            # 从 "Cuda compilation tools, release 12.8, V12.8.93" 提取版本号
-            import re
-            match = re.search(r'release (\d+)\.(\d+)', result.stdout)
-            if match:
-                major, minor = match.groups()
-                return f"cu{major}{minor}"
-    except FileNotFoundError:
-        pass
-    return None
-
 
 # If not in an isolated environment, it means that --no-build-isolation is used
 _using_no_build_isolation = not _is_in_build_isolation()
@@ -155,9 +140,9 @@ class FlagScaleBuild(_build):
             check_device(self.device)
 
             from tools.patch.patch import normalize_backend
+
             backends = self.backend.split(",")
-            normalized = [normalize_backend(backend.strip()) for backend in backends]
-            self.backend = normalized
+            self.backend = [normalize_backend(backend.strip()) for backend in backends]
             print(f"[build] Received backend = {self.backend}")
             print(f"[build] Received device = {self.device}")
         else:
@@ -215,9 +200,8 @@ class FlagScaleBuild(_build):
             # Continue build even if some dependencies fail to install
 
     def run(self):
-
         if self.backend is not None:
-            # install requirements to avoid  conflicts
+            # install requirements to avoid conflicts
             self.install_requirements()
             self.install_extras()
             build_py_cmd = self.get_finalized_command('build_py')
