@@ -10,10 +10,6 @@ from setuptools.command.build_py import build_py as _build_py
 from setuptools._distutils._log import log
 from setuptools.command.install_lib import install_lib as _install_lib
 
-TORCH_CUDA_VERSION_MAP = {
-    "cu128": "torch==2.7.1",
-    "cu124": "torch==2.5.1"
-}
 
 def _is_in_build_isolation():
     """Check if in the pip build isolation environment"""
@@ -165,29 +161,7 @@ class FlagScaleBuild(_build):
             print(f"[build] Received backend = {self.backend}")
             print(f"[build] Received device = {self.device}")
         else:
-            print(f"[build] No backend specified, just build FlagScale python codes.")
-
-    def install_torch(self):
-        if self.device == "gpu":
-            cuda_tag = _get_cuda_tag()
-            
-            if cuda_tag:
-                print(f"[build] Detected CUDA tag: {cuda_tag}")
-                install_torch_cmd = [
-                    sys.executable, "-m", "pip", "install",
-                    f"{TORCH_CUDA_VERSION_MAP[cuda_tag]}",
-                    f"torchvision",
-                    f"torchaudio",
-                    "--extra-index-url", f"https://download.pytorch.org/whl/{cuda_tag}"
-                ]
-            else:
-                print(f"[build] CUDA not detected, installing CPU version of torch")
-                install_torch_cmd = [
-                    sys.executable, "-m", "pip", "install",
-                    "torch==2.7.1", "torchvision==0.22.1", "torchaudio==2.7.1"
-                ]
-            
-            subprocess.check_call(install_torch_cmd)   
+            print(f"[build] No backend specified, just build FlagScale python codes.") 
         
     def install_extras(self):
         """Install extra requirements from extras_require"""
@@ -230,10 +204,22 @@ class FlagScaleBuild(_build):
         else:
             log.info(f"[build] Warning: distribution has no extras_require defined")
 
+    def install_requirements(self):
+        install_requires = _get_install_requires()
+        install_cmd = [sys.executable, "-m", "pip", "install", "--verbose"] + install_requires
+        try:
+            subprocess.check_call(install_cmd)
+            log.info(f"[build] Successfully installed dependencies from install_requires")
+        except subprocess.CalledProcessError as e:
+            log.info(f"[build] Warning: Failed to install some dependencies from install_requires: {e}")
+            # Continue build even if some dependencies fail to install
+
     def run(self):
-        self.install_torch()
-        self.install_extras()
+
         if self.backend is not None:
+            # install requirements to avoid  conflicts
+            self.install_requirements()
+            self.install_extras()
             build_py_cmd = self.get_finalized_command('build_py')
             build_py_cmd.backend = self.backend
             build_py_cmd.device = self.device

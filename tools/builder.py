@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 import sys
+import json
 
 from tools.patch.unpatch import unpatch, apply_hardware_patch
 
@@ -214,16 +215,15 @@ def build_vllm(device, root_dir):
         )
         env["VLLM_INSTALL_PUNICA_KERNELS"] = "1"
     try:
-        env["MAX_JOBS"] = str(os.environ.get("MAX_JOBS", 32))
         # prevent incompatible torch version when building vllm
         run_subprocess_with_error_capture(
             [sys.executable, '-m', 'pip', 'install', 'torch==2.8.0', 'torchvision==0.23.0', 'torchaudio==2.8.0', '--extra-index-url', f'https://download.pytorch.org/whl/{_get_cuda_tag()}'],
-            cwd=vllm_path,
-            env=env,
             description="vllm build"
         )
+        env["MAX_JOBS"] = str(os.environ.get("MAX_JOBS", 32))
+
         run_subprocess_with_error_capture(
-            [sys.executable, '-m', 'pip', 'install', '.', '--verbose'],
+            [sys.executable, '-m', 'pip', 'install', '--no-cache-dir', '.', '--verbose', '--no-build-isolation'],
             cwd=vllm_path,
             env=env,
             description="vllm build"
@@ -427,17 +427,57 @@ def unpatch_backend(backend, device, root_dir):
         
     dst = os.path.join(root_dir, "third_party", backend)
     src = os.path.join(root_dir, "flagscale", "backends", backend)
+    
+    # Marker file path to track unpatch status
+    marker_file = os.path.join(dst, ".flagscale_unpatched")
+    
+    # Check if unpatch has already been completed
+    if os.path.exists(marker_file):
+        try:
+            with open(marker_file, 'r', encoding='utf-8') as f:
+                marker_data = json.load(f)
+            
+            # Verify that the marker file information matches current configuration
+            if (marker_data.get("backend") == backend and 
+                marker_data.get("device") == device and
+                marker_data.get("backend_commit") == backend_commit):
+                print(f"[build_py] Backend {backend} for device {device} has already been unpatched. Skipping unpatch.")
+                print(f"[build_py] Marker file: {marker_file}")
+                return
+            else:
+                print(f"[build_py] Marker file exists but configuration changed. Re-unpatching...")
+                os.remove(marker_file)
+        except (json.JSONDecodeError, KeyError) as e:
+            print(f"[build_py] Invalid marker file format: {e}. Re-unpatching...")
+            os.remove(marker_file)
+    
     print(f"[build_py] Device {device} initializing the {backend} backend.")
-    force = os.getenv("FLAGSCALE_FORCE_INIT", False)
+    # backend_commit needs to be in dictionary format {backend_name: commit}
+    backend_commit_dict = {backend: backend_commit} if backend_commit else {}
     unpatch(
         root_dir,
         src,
         dst,
         backend,
-        force=force,
-        backend_commit=backend_commit,
+        force=False,
+        backend_commit=backend_commit_dict,
         fs_extension=True,
     )
+    
+    # Create marker file after successful unpatch
+    try:
+        marker_data = {
+            "backend": backend,
+            "device": device,
+            "backend_commit": backend_commit
+        }
+        # Ensure directory exists
+        os.makedirs(dst, exist_ok=True)
+        with open(marker_file, 'w', encoding='utf-8') as f:
+            json.dump(marker_data, f, indent=2)
+        print(f"[build_py] Created unpatch marker file: {marker_file}")
+    except Exception as e:
+        print(f"[build_py] Warning: Failed to create marker file: {e}")
 
 
 
