@@ -128,8 +128,12 @@ We recommend using the latest release of [NGC's PyTorch container](https://catal
 
     - Whl Installation 
         ```sh
-        PYTHONPATH=./:$PYTHONPATH pip install .[vllm-gpu|megatron-gpu] --no-build-isolation --verbose
-        flagscale install --backend=[vllm|megatron] --device=gpu
+        # For vllm backend:
+        PYTHONPATH=./:$PYTHONPATH pip install .[vllm-gpu] --no-build-isolation --verbose
+        flagscale install --backend=vllm --device=gpu
+        # For megatron backend:
+        PYTHONPATH=./:$PYTHONPATH pip install .[megatron-gpu] --no-build-isolation --verbose
+        flagscale install --backend=megatron --device=gpu
         ```
 
     The installation methods vary greatly in different chip environments, and the above installation methods currently only support GPU. More backends and chips will be supported in the future.
