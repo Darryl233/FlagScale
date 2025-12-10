@@ -149,7 +149,7 @@ def run_subprocess_with_error_capture(
                 import traceback
 
                 log_f.write(traceback.format_exc())
-        except:
+        except Exception:
             pass
 
         import traceback
@@ -328,7 +328,7 @@ def build_megatron_energon(device, root_dir):
         import editables
         import hatch_vcs
         import hatchling
-    except:
+    except Exception:
         try:
             print("[INFO] hatchling not found. Installing...")
             run_subprocess_with_error_capture(
@@ -349,7 +349,7 @@ def build_megatron_energon(device, root_dir):
         except subprocess.CalledProcessError:
             print("[ERROR] Failed to install hatchling, hatch-vcs and editables.")
             raise
-        except:
+        except Exception:
             print("[ERROR] Failed to install hatchling, hatch-vcs and editables.")
             sys.exit(1)
 

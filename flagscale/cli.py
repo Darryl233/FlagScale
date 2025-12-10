@@ -503,7 +503,7 @@ def show(backend, device="gpu"):
 @click.option("--domain", type=str, default=None, help="Domain name for installation")
 @click.option("--device", default="gpu", help="Device type (e.g., gpu, cpu)")
 @click.option("--version", default=None)
-@click.option("--from-source", is_flag=False, help="Force install from source code")
+@click.option("--from-source", is_flag=True, help="Force install from source code")
 def install(backend=None, domain=None, device="gpu", version=None, from_source=False):
     """
     Install the whl version of backend. If whl is not available, install from source.
@@ -511,8 +511,9 @@ def install(backend=None, domain=None, device="gpu", version=None, from_source=F
 
     if "metax" in device.lower():
         device = "metax"
-
-    backends = backend.split(",")
+    assert backend or domain, "Either backend or domain must be specified"
+    if backend:
+        backends = backend.split(",")
     if domain:
         if domain == "robotics":
             backends = ["Megatron-LM", "Megatron-Energon"]

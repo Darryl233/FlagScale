@@ -9,6 +9,7 @@ from setuptools.command.build import build as _build
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.install_lib import install_lib as _install_lib
+from sympy import E
 
 
 def _is_in_build_isolation():
@@ -27,7 +28,7 @@ def _is_in_build_isolation():
         for sp in site_packages:
             if '/pip-build-env-' in sp:
                 return True
-    except:
+    except Exception:
         pass
     return False
 
@@ -51,7 +52,7 @@ if _using_no_build_isolation:
     install_cmd = [sys.executable, "-m", "pip", "install"] + build_sys_requires
     subprocess.check_call(install_cmd)
 else:
-    raise ValueError("Not in an isolated environment, please use --no-build-isolation flag.")
+    raise ValueError("Please use the --no-build-isolation flag when installing.")
 
 from tools.builder import (
     build_backend,

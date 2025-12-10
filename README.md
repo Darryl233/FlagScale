@@ -142,11 +142,11 @@ FlagScale provides a unified runner for various tasks, including training，infe
     Modify the data path in ./examples/aquila/conf/train/7b.yaml
     ```yaml
     data:
-        data_path: /path/to/data/pile_wikipedia_demo # modify data path here
+        data_path: ${data_path:??}  # modify data path here
         split: 1
         tokenizer:
             legacy_tokenizer: true
-            tokenizer_type: AquTokenizerFS
+            tokenizer_type: AquilaTokenizerFS
             vocab_file: ./examples/aquila/tokenizer/vocab.json
             merge_file: ./examples/aquila/tokenizer/merges.txt
             special_tokens_file: ./examples/aquila/tokenizer/special_tokens.txt
@@ -192,7 +192,7 @@ FlagScale provides a unified runner for various tasks, including training，infe
     ```
     
 #### Serve
-1. Download Tokenzier
+1. Download Tokenizer
     ```sh
     mkdir -p /models/physical-intelligence/
     cd /models/physical-intelligence/
