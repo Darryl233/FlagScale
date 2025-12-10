@@ -4,6 +4,8 @@ import shutil
 import subprocess
 import sys
 
+from datetime import datetime
+
 from tools.patch.unpatch import apply_hardware_patch, unpatch
 
 SUPPORTED_DEVICES = ["cpu", "gpu", "ascend", "cambricon", "bi", "metax", "kunlunxin", "musa"]
@@ -59,9 +61,7 @@ def run_subprocess_with_error_capture(
             log_f.write(f"\n{'=' * 80}\n")
             log_f.write(f"[{description}] Command: {' '.join(cmd)}\n")
             log_f.write(f"[{description}] CWD: {cwd or os.getcwd()}\n")
-            log_f.write(
-                f"[{description}] Time: {subprocess.check_output(['date']).decode().strip()}\n"
-            )
+            log_f.write(f"[{description}] Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
             log_f.write(f"{'=' * 80}\n")
             log_f.flush()
 
@@ -149,8 +149,8 @@ def run_subprocess_with_error_capture(
                 import traceback
 
                 log_f.write(traceback.format_exc())
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"[builder] Unexpected error writing to log file: {e}")
 
         import traceback
 
@@ -178,13 +178,50 @@ def check_vllm_unpatch_device(device):
 
 
 def check_device(device):
-    is_supported = False
     for supported_device in SUPPORTED_DEVICES:
         if supported_device in device.lower():
-            is_supported = True
             return
-    if not is_supported:
-        raise ValueError(f"Unsupported device {device}. Supported devices are {SUPPORTED_DEVICES}.")
+    raise ValueError(f"Unsupported device {device}. Supported devices are {SUPPORTED_DEVICES}.")
+
+
+def _parse_torch_versions_from_cuda_txt(root_dir):
+    """
+    Parse torch/torchaudio/torchvision versions from third_party/vllm/requirements/cuda.txt
+
+    Args:
+        root_dir: FlagScale root directory
+
+    Returns:
+        dict: Dictionary containing 'torch', 'torchaudio', 'torchvision' version numbers
+    """
+    import re
+
+    cuda_txt_path = os.path.join(root_dir, "third_party", "vllm", "requirements", "cuda.txt")
+
+    if not os.path.exists(cuda_txt_path):
+        raise FileNotFoundError(f"cuda.txt not found at {cuda_txt_path}")
+
+    versions = {}
+    with open(cuda_txt_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if '#' in line:
+                line = line[: line.index('#')]
+            line = line.strip()
+            if not line:
+                continue
+
+            for package in ['torch', 'torchaudio', 'torchvision']:
+                pattern = rf'^{package}==([\d.]+)'
+                match = re.search(pattern, line)
+                if match:
+                    versions[package] = match.group(1)
+
+    required_packages = ['torch', 'torchaudio', 'torchvision']
+    missing = [pkg for pkg in required_packages if pkg not in versions]
+    if missing:
+        raise ValueError(f"Missing torch package versions in cuda.txt: {missing}")
+
+    return versions
 
 
 def build_vllm(device, root_dir):
@@ -218,15 +255,16 @@ def build_vllm(device, root_dir):
         env["VLLM_INSTALL_PUNICA_KERNELS"] = "1"
     try:
         # prevent incompatible torch version when building vllm
+        torch_versions = _parse_torch_versions_from_cuda_txt(root_dir)
         run_subprocess_with_error_capture(
             [
                 sys.executable,
                 '-m',
                 'pip',
                 'install',
-                'torch==2.8.0',
-                'torchvision==0.23.0',
-                'torchaudio==2.8.0',
+                f'torch=={torch_versions["torch"]}',
+                f'torchvision=={torch_versions["torchvision"]}',
+                f'torchaudio=={torch_versions["torchaudio"]}',
                 '--extra-index-url',
                 f'https://download.pytorch.org/whl/{_get_cuda_tag()}',
             ],
@@ -349,8 +387,8 @@ def build_megatron_energon(device, root_dir):
         except subprocess.CalledProcessError:
             print("[ERROR] Failed to install hatchling, hatch-vcs and editables.")
             raise
-        except Exception:
-            print("[ERROR] Failed to install hatchling, hatch-vcs and editables.")
+        except Exception as e:
+            print(f"[ERROR] Failed to install hatchling, hatch-vcs and editables: {e}")
             sys.exit(1)
 
     energon_path = os.path.join(root_dir, "third_party", "Megatron-Energon")
@@ -513,7 +551,7 @@ def unpatch_backend(backend, device, root_dir):
 
 def unpatch_hardware_backend(backend, device, build_lib, root_dir):
     print(f"[build_py] Device {device} unpatching the vllm backend.")
-    # Unpatch the backed in specified device
+    # Unpatch the backend in specified device
     from git import Repo
 
     main_repo = Repo(root_dir)

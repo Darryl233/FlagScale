@@ -112,8 +112,18 @@ We recommend using the latest release of [NGC's PyTorch container](https://catal
     - Source Installation
         ```sh
         PYTHONPATH=./:$PYTHONPATH pip install . --no-build-isolation --verbose \
-        --config-settings=device=gpu \
-        --config-settings=backend=[vllm|megatron]
+        --config-settings=device=<device> \
+        --config-settings=backend=<backend>
+
+        # For vllm:
+        --config-settings=device=gpu
+        --config-settings=backend=vllm
+        # For megatron:
+        --config-settings=device=gpu
+        --config-settings=backend=Megatron-LM
+        # Or specify both:
+        --config-settings=device=gpu
+        --config-settings=backend=vllm,Megatron-LM
         ```
 
     - Whl Installation 
@@ -129,6 +139,9 @@ We recommend using the latest release of [NGC's PyTorch container](https://catal
 FlagScale provides a unified runner for various tasks, including training，inference and serve. Simply specify the configuration file to run the task with a single command. The runner will automatically load the configurations and execute the task. The following example demonstrates how to run a distributed training task.
 
 #### Train
+
+Require megatron env. See details in [Setup](#-setup)
+
 1. Prepare dataset demo:
 
     We provide a small processed data ([bin](https://model.ks3-cn-beijing.ksyuncs.com/nlpdata/pile_wikipedia_demo.bin) and [idx](https://model.ks3-cn-beijing.ksyuncs.com/nlpdata/pile_wikipedia_demo.idx)) from the [Pile](https://pile.eleuther.ai/) dataset.
@@ -167,6 +180,9 @@ FlagScale provides a unified runner for various tasks, including training，infe
     ```
 
 #### Inference
+
+Require vllm env. See details in [Setup](#-setup)
+
 1. Prepare model
     ```sh
     modelscope download --model BAAI/Aquila-7B README.md --local_dir ./
@@ -192,7 +208,11 @@ FlagScale provides a unified runner for various tasks, including training，infe
     ```
     
 #### Serve
-1. Download Tokenizer
+1. Setup env
+    ```
+    PYTHONPATH=./:$PYTHONPATH pip install . --config-settings=domain=robotics --config-settings=device=gpu  --verbose --no-build-isolation
+    ```
+2. Download Tokenizer
     ```sh
     mkdir -p /models/physical-intelligence/
     cd /models/physical-intelligence/
@@ -200,7 +220,7 @@ FlagScale provides a unified runner for various tasks, including training，infe
     git clone https://huggingface.co/physical-intelligence/fast
     ```
 
-2. Edit Config
+3. Edit Config
 
     ./examples/robobrain_x0/conf/serve/robobrain_x0.yaml
 
@@ -209,11 +229,11 @@ FlagScale provides a unified runner for various tasks, including training，infe
     - engine_args.port -> A port available in your env, for example: 5001
     - engine_args.tokenizer_path ->/models/physical-intelligence/fast
 
-3. Start the server:
+4. Start the server:
     ```sh
     python run.py --config-path ./examples/robobrain_x0/conf --config-name serve action=run
     ```
-4. Stop the server:
+5. Stop the server:
     ```sh
     python run.py --config-path ./examples/robobrain_x0/conf --config-name serve action=stop
     ```

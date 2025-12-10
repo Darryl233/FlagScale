@@ -1,5 +1,4 @@
 import os
-import shutil
 import subprocess
 import sys
 
@@ -9,7 +8,6 @@ from setuptools.command.build import build as _build
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_py import build_py as _build_py
 from setuptools.command.install_lib import install_lib as _install_lib
-from sympy import E
 
 
 def _is_in_build_isolation():
@@ -38,7 +36,7 @@ _using_no_build_isolation = not _is_in_build_isolation()
 if _using_no_build_isolation:
     print(f"[build] Using no build isolation, installing build system dependencies...")
     build_sys_requires = [
-        "setuptools>=77.0",
+        "setuptools==79.0.1",
         "wheel",
         "gitpython",
         "pyyaml",

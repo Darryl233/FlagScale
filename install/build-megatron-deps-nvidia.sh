@@ -25,7 +25,7 @@ fi
 pip install --no-cache-dir --no-build-isolation --verbose git+https://github.com/Dao-AILab/causal-conv1d.git@v1.2.2.post1
 pip install --no-cache-dir --no-build-isolation --verbose git+https://github.com/fanshiqing/grouped_gemm@v1.1.2
 
-flash-attention
+# flash-attention install for megatron-lm
 cu=$(nvcc --version | grep "Cuda compilation tools" | awk '{print $5}' | cut -d '.' -f 1)
 torch=$(pip show torch | grep Version | awk '{print $2}' | cut -d '+' -f 1 | cut -d '.' -f 1,2)
 cp=$(python3 --version | awk '{print $2}' | awk -F. '{print $1$2}')
@@ -40,14 +40,14 @@ pip install --no-cache-dir --verbose https://github.com/Dao-AILab/flash-attentio
 git clone --recursive https://github.com/NVIDIA/TransformerEngine.git
 cd TransformerEngine
 git checkout e9a5fa4e  # Date:   Thu Sep 4 22:39:53 2025 +0200
-uv pip install --no-build-isolation --verbose . --index-url https://mirrors.aliyun.com/pypi/simple/
+uv pip install --no-build-isolation --verbose . 
 cd ..
 rm -r ./TransformerEngine    
 
 # apex install for megatron-lm
 git clone https://github.com/NVIDIA/apex
 cd apex
-pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings '--build-option=--cpp_ext' --config-settings '--build-option=--cuda_ext' ./ --index-url https://mirrors.aliyun.com/pypi/simple/
+pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings '--build-option=--cpp_ext' --config-settings '--build-option=--cuda_ext' ./
 cd ..
 rm -r ./apex
 

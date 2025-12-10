@@ -231,8 +231,8 @@ def _install_from_whl(backend, device, version=None):
         else:
             versions = [Version(version) for version in compatible_versions]
             install_version = max(versions)
-            for idx, version in enumerate(versions):
-                if version == install_version:
+            for idx, ver in enumerate(versions):
+                if ver == install_version:
                     install_version = compatible_versions[idx]
                     break
 
@@ -512,6 +512,7 @@ def install(backend=None, domain=None, device="gpu", version=None, from_source=F
     if "metax" in device.lower():
         device = "metax"
     assert backend or domain, "Either backend or domain must be specified"
+    backends = []
     if backend:
         backends = backend.split(",")
     if domain:
