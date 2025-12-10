@@ -217,7 +217,7 @@ def _install_from_source(backend, device):
         raise click.ClickException(f"Error during installation: {e}")
 
 
-def _install_from_whl(backend, device):
+def _install_from_whl(backend, device, version=None):
     from flag_scale.version import get_whl_version
 
     versions, compatible_versions = get_whl_version(backend, device)
@@ -523,7 +523,7 @@ def install(backend=None, domain=None, device="gpu", version=None, from_source=F
     for backend in backends:
         if not from_source:
             try:
-                _install_from_whl(backend, device)
+                _install_from_whl(backend, device, version)
             except Exception as e:
                 click.echo(f"Error installing whl package: {e}", err=True)
                 click.echo(f"Falling back to source installation for {backend}...")
