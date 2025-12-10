@@ -359,7 +359,7 @@ class FlagScaleInstallLib(_install_lib):
 
 
 def _get_install_requires():
-    """获取 install_requires 列表"""
+    """get install_requires list"""
     install_requires = []
 
     install_requires.extend(_read_requirements_file('requirements/requirements-base.txt'))
