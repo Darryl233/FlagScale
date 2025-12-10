@@ -4,10 +4,10 @@ import subprocess
 import sys
 
 from setuptools import setup
+from setuptools._distutils._log import log
 from setuptools.command.build import build as _build
 from setuptools.command.build_ext import build_ext as _build_ext
 from setuptools.command.build_py import build_py as _build_py
-from setuptools._distutils._log import log
 from setuptools.command.install_lib import install_lib as _install_lib
 
 
@@ -21,6 +21,7 @@ def _is_in_build_isolation():
         return True
     # Check if the site-packages path contains the isolation environment
     import site
+
     try:
         site_packages = site.getsitepackages()
         for sp in site_packages:
@@ -35,18 +36,29 @@ def _is_in_build_isolation():
 _using_no_build_isolation = not _is_in_build_isolation()
 if _using_no_build_isolation:
     print(f"[build] Using no build isolation, installing build system dependencies...")
-    build_sys_requires = ["setuptools>=77.0", "wheel", "gitpython", "pyyaml", "cryptography", "pip", "hatchling", "hatch-vcs", "editables", "pybind11==2.13.6"]
+    build_sys_requires = [
+        "setuptools>=77.0",
+        "wheel",
+        "gitpython",
+        "pyyaml",
+        "cryptography",
+        "pip",
+        "hatchling",
+        "hatch-vcs",
+        "editables",
+        "pybind11==2.13.6",
+    ]
     install_cmd = [sys.executable, "-m", "pip", "install"] + build_sys_requires
     subprocess.check_call(install_cmd)
 else:
     raise ValueError("Not in an isolated environment, please use --no-build-isolation flag.")
 
 from tools.builder import (
+    build_backend,
     check_device,
     check_vllm_unpatch_device,
     unpatch_backend,
     unpatch_hardware_backend,
-    build_backend,
 )
 
 
@@ -80,7 +92,15 @@ def deduplicate_dependencies(dependencies):
     seen = set()
     result = []
     for dep in dependencies:
-        pkg_name = dep.split("==")[0].split(">=")[0].split("<=")[0].split(">")[0].split("<")[0].split("!=")[0].strip()
+        pkg_name = (
+            dep.split("==")[0]
+            .split(">=")[0]
+            .split("<=")[0]
+            .split(">")[0]
+            .split("<")[0]
+            .split("!=")[0]
+            .strip()
+        )
         pkg_name_lower = pkg_name.lower()
         if pkg_name_lower not in seen:
             seen.add(pkg_name_lower)
@@ -113,7 +133,7 @@ class FlagScaleBuild(_build):
             self.device = os.environ.get("FLAGSCALE_DEVICE", "gpu")
         if self.domain is None:
             self.domain = os.environ.get("FLAGSCALE_DOMAIN")
-        
+
         # Check if we need to install extra dependencies based on backend-device combination
         self.extras_to_install = []
         if self.backend and self.device:
@@ -124,12 +144,15 @@ class FlagScaleBuild(_build):
                     extra_name = f"{backend.lower()}-{self.device.lower()}"
                     if extra_name in available_extras:
                         self.extras_to_install.append(extra_name)
-                        print(f"[build] Detected backend={backend} and device={self.device}, will install {extra_name} extra dependencies")
+                        print(
+                            f"[build] Detected backend={backend} and device={self.device}, will install {extra_name} extra dependencies"
+                        )
                     else:
                         print(f"[build] No extra '{extra_name}' found in extras_require, skipping")
 
         if self.domain is not None:
             from tools.patch.patch import domain_to_backends
+
             self.backend = domain_to_backends(self.domain)
             print(f"[build] Received domain = {self.domain}, will build backends = {self.backend}")
 
@@ -146,8 +169,8 @@ class FlagScaleBuild(_build):
             print(f"[build] Received backend = {self.backend}")
             print(f"[build] Received device = {self.device}")
         else:
-            print(f"[build] No backend specified, just build FlagScale python codes.") 
-        
+            print(f"[build] No backend specified, just build FlagScale python codes.")
+
     def install_extras(self):
         """Install extra requirements from extras_require"""
         if not self.extras_to_install:
@@ -155,7 +178,7 @@ class FlagScaleBuild(_build):
         log.info(f"[build] Installing extras: {self.extras_to_install}")
         if hasattr(self.distribution, 'extras_require') and self.distribution.extras_require:
             all_deps_to_install = []
-            
+
             for extra_name in self.extras_to_install:
                 if extra_name in self.distribution.extras_require:
                     deps = self.distribution.extras_require[extra_name]
@@ -166,7 +189,7 @@ class FlagScaleBuild(_build):
                         log.info(f"[build] Warning: {extra_name} extra has no dependencies defined")
                 else:
                     log.info(f"[build] Warning: {extra_name} extra not found in extras_require")
-            
+
             if all_deps_to_install:
                 # Remove duplicates while preserving order
                 seen = set()
@@ -176,16 +199,31 @@ class FlagScaleBuild(_build):
                         seen.add(dep)
                         unique_deps.append(dep)
                 log.info(f"[build] Unique dependencies: {unique_deps}")
-                log.info(f"[build] Installing {len(unique_deps)} unique dependencies from extras: {self.extras_to_install}")
-                install_cmd = [sys.executable, "-m", "pip", "install", "--verbose", "--no-build-isolation"] + unique_deps
+                log.info(
+                    f"[build] Installing {len(unique_deps)} unique dependencies from extras: {self.extras_to_install}"
+                )
+                install_cmd = [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--verbose",
+                    "--no-build-isolation",
+                ] + unique_deps
                 try:
                     subprocess.check_call(install_cmd)
-                    log.info(f"[build] Successfully installed dependencies from extras: {self.extras_to_install}")
+                    log.info(
+                        f"[build] Successfully installed dependencies from extras: {self.extras_to_install}"
+                    )
                 except subprocess.CalledProcessError as e:
-                    log.info(f"[build] Warning: Failed to install some dependencies from extras {self.extras_to_install}: {e}")
+                    log.info(
+                        f"[build] Warning: Failed to install some dependencies from extras {self.extras_to_install}: {e}"
+                    )
                     # Continue build even if some dependencies fail to install
             else:
-                log.info(f"[build] No dependencies to install from extras: {self.extras_to_install}")
+                log.info(
+                    f"[build] No dependencies to install from extras: {self.extras_to_install}"
+                )
         else:
             log.info(f"[build] Warning: distribution has no extras_require defined")
 
@@ -196,7 +234,9 @@ class FlagScaleBuild(_build):
             subprocess.check_call(install_cmd)
             log.info(f"[build] Successfully installed dependencies from install_requires")
         except subprocess.CalledProcessError as e:
-            log.info(f"[build] Warning: Failed to install some dependencies from install_requires: {e}")
+            log.info(
+                f"[build] Warning: Failed to install some dependencies from install_requires: {e}"
+            )
             # Continue build even if some dependencies fail to install
 
     def run(self):
@@ -247,7 +287,7 @@ class FlagScaleBuildPy(_build_py):
         if self.backend:
             print(f"[build_py] Running with backend = {self.backend}")
             assert self.device is not None
-            
+
             # At present, only vLLM supports domestic chips, and the remaining backends have not been supported yet.
             # FlagScale just modified the vLLM and Megatron-LM
             main_path = os.path.dirname(os.path.abspath(__file__))
@@ -321,15 +361,11 @@ class FlagScaleInstallLib(_install_lib):
 def _get_install_requires():
     """获取 install_requires 列表"""
     install_requires = []
-    
+
     install_requires.extend(_read_requirements_file('requirements/requirements-base.txt'))
     install_requires.extend(_read_requirements_file('requirements/requirements-common.txt'))
-    core_deps = [
-        "setuptools>=77.0.0",
-        "packaging>=24.2",
-        "importlib_metadata>=8.5.0",
-    ]
-    
+    core_deps = ["setuptools>=77.0.0", "packaging>=24.2", "importlib_metadata>=8.5.0"]
+
     all_deps = install_requires + core_deps
     result = deduplicate_dependencies(all_deps)
     log.info(f"[build] install_requires Unique dependencies: {result}")
@@ -340,40 +376,27 @@ def _get_install_requires():
 # TODO: replace with megatron-lm-fl/vllm-fl when they are published
 def _get_extras_require():
     """Build the extras_require dictionary"""
-    serving_common_deps = [
-        'requirements/serving/requirements.txt',
-    ]
-    train_common_deps = [
-        'requirements/train/requirements.txt',
-    ]
-    inference_common_deps = [
-        'requirements/inference/requirements.txt',
-    ]
+    serving_common_deps = ['requirements/serving/requirements.txt']
+    train_common_deps = ['requirements/train/requirements.txt']
+    inference_common_deps = ['requirements/inference/requirements.txt']
     return {
         # domains
-        'robotics-gpu': _read_requirements_files([
-            'requirements/serving/robotics/requirements.txt', 
-            'requirements/train/robotics/requirements.txt',
-            *serving_common_deps, 
-            *train_common_deps,
-            *inference_common_deps,
-        ]),
-
+        'robotics-gpu': _read_requirements_files(
+            [
+                'requirements/serving/robotics/requirements.txt',
+                'requirements/train/robotics/requirements.txt',
+                *serving_common_deps,
+                *train_common_deps,
+                *inference_common_deps,
+            ]
+        ),
         # vllm
-        'vllm-gpu': _read_requirements_files([
-            *inference_common_deps,
-            *serving_common_deps,
-        ]),
-        'vllm-metax': _read_requirements_files([
-            *inference_common_deps,
-            *serving_common_deps,
-        ]),
-
+        'vllm-gpu': _read_requirements_files([*inference_common_deps, *serving_common_deps]),
+        'vllm-metax': _read_requirements_files([*inference_common_deps, *serving_common_deps]),
         # megatron
-        'megatron-gpu': _read_requirements_files([
-            'requirements/train/megatron/requirements-cuda.txt',
-            *train_common_deps,
-        ]),
+        'megatron-gpu': _read_requirements_files(
+            ['requirements/train/megatron/requirements-cuda.txt', *train_common_deps]
+        ),
     }
 
 

@@ -43,17 +43,17 @@ FlagScale is also a part of [FlagAI-Open](https://flagopen.baai.ac.cn/), an open
 
 ## ✏️ Support List
 ### Platform
-| Vendors | vllm | sglang | megatron |
-| ------- | ---- | ------ | -------- |
-| BI V150 | ✅ | | ✅ |
-| Cambricon MLU | ✅ | | ✅ |
-| Huawei Atlas800 TA3 (Ascend) | ✅ | ✅ | ✅ |
-| Hygon BW1000 | ✅ | | ✅ |
-| Kunlunxin R310p | ✅ | | ✅ |
-| Metax C550 | ✅ | | ✅ |
-| MUSA S5000 | ✅ | | ✅ |
-| Tsing Micro | ✅ | | ✅ |
-| NVIDIA+Cambricon MLU | | | ✅ |
+| Vendors | vllm | megatron |
+| ------- | ---- | -------- |
+| BI V150 | ✅ | ✅ |
+| Cambricon MLU | ✅ | ✅ |
+| Huawei Atlas800 TA3 (Ascend) | ✅ | ✅ |
+| Hygon BW1000 | ✅ | ✅ |
+| Kunlunxin R310p | ✅ | ✅ |
+| Metax C550 | ✅ | ✅ |
+| MUSA S5000 | ✅ | ✅ |
+| Tsing Micro | ✅ | ✅ |
+| NVIDIA+Cambricon MLU | | ✅ |
 
 
 ### Model

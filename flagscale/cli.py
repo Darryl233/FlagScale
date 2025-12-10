@@ -179,7 +179,7 @@ def _install_from_source(backend, device):
     """Install backend from source code using builder functions."""
     import os
     import sys
-    
+
     # need run in source directory
     flagscale_path = os.path.dirname(os.path.abspath(__file__))
     if 'site-packages' in flagscale_path or 'dist-packages' in flagscale_path:
@@ -192,24 +192,21 @@ def _install_from_source(backend, device):
         click.echo(f"[install] Using FlagScale source directory: {root_dir}")
     else:
         root_dir = os.path.abspath(os.path.join(flagscale_path, ".."))
-    
+
     # Import builder functions
     sys.path.insert(0, root_dir)
+    from tools.builder import build_and_install_backend, check_device
     from tools.patch.patch import normalize_backend
-    from tools.builder import (
-        build_and_install_backend,
-        check_device,
-    )
-    
+
     # Validate device
     try:
         check_device(device)
     except ValueError as e:
         raise click.ClickException(str(e))
-    
+
     # Normalize backend name
     backend_normalized = normalize_backend(backend)
-    
+
     # Build and install the backend (includes unpatch step)
     try:
         build_and_install_backend(backend_normalized, device, root_dir)
@@ -222,6 +219,7 @@ def _install_from_source(backend, device):
 
 def _install_from_whl(backend, device):
     from flag_scale.version import get_whl_version
+
     versions, compatible_versions = get_whl_version(backend, device)
     if compatible_versions:
         install_version = None
@@ -237,14 +235,22 @@ def _install_from_whl(backend, device):
                 if version == install_version:
                     install_version = compatible_versions[idx]
                     break
-        
+
         if install_version:
             install_version = f"{backend}" + "-" + install_version + ".whl"
             click.echo(f"Installing {install_version} for {backend} on {device}.")
             install_version = quote(install_version)
             ks3_path = f"https://baai-flagscale.ks3-cn-beijing.ksyuncs.com/whl/{backend}/{device}/{install_version}"
             subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", ks3_path, "--no-build-isolation", "--verbose"]
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    ks3_path,
+                    "--no-build-isolation",
+                    "--verbose",
+                ]
             )
             click.echo(f"Successfully installed {backend} from whl package.")
     else:
