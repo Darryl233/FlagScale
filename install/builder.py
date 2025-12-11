@@ -255,7 +255,7 @@ def build_vllm(device, root_dir):
         env["VLLM_INSTALL_PUNICA_KERNELS"] = "1"
     try:
         if device == "gpu":
-        # prevent incompatible torch version when building vllm
+            # prevent incompatible torch version when building vllm
             torch_versions = _parse_torch_versions_from_cuda_txt(root_dir)
             run_subprocess_with_error_capture(
                 [
