@@ -254,24 +254,25 @@ def build_vllm(device, root_dir):
         )
         env["VLLM_INSTALL_PUNICA_KERNELS"] = "1"
     try:
+        if device == "gpu":
         # prevent incompatible torch version when building vllm
-        torch_versions = _parse_torch_versions_from_cuda_txt(root_dir)
-        run_subprocess_with_error_capture(
-            [
-                sys.executable,
-                '-m',
-                'pip',
-                'install',
-                f'torch=={torch_versions["torch"]}',
-                f'torchvision=={torch_versions["torchvision"]}',
-                f'torchaudio=={torch_versions["torchaudio"]}',
-                '--extra-index-url',
-                f'https://download.pytorch.org/whl/{_get_cuda_tag()}',
-            ],
-            description="vllm build",
-        )
-        env["MAX_JOBS"] = str(os.environ.get("MAX_JOBS", 32))
+            torch_versions = _parse_torch_versions_from_cuda_txt(root_dir)
+            run_subprocess_with_error_capture(
+                [
+                    sys.executable,
+                    '-m',
+                    'pip',
+                    'install',
+                    f'torch=={torch_versions["torch"]}',
+                    f'torchvision=={torch_versions["torchvision"]}',
+                    f'torchaudio=={torch_versions["torchaudio"]}',
+                    '--extra-index-url',
+                    f'https://download.pytorch.org/whl/{_get_cuda_tag()}',
+                ],
+                description="vllm build",
+            )
 
+        env["MAX_JOBS"] = str(os.environ.get("MAX_JOBS", 32))
         run_subprocess_with_error_capture(
             [
                 sys.executable,

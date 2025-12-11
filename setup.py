@@ -52,7 +52,7 @@ if _using_no_build_isolation:
 else:
     raise ValueError("Please use the --no-build-isolation flag when installing.")
 
-from tools.builder import (
+from install.builder import (
     build_backend,
     check_device,
     check_vllm_unpatch_device,

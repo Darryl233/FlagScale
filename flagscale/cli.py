@@ -195,7 +195,7 @@ def _install_from_source(backend, device):
 
     # Import builder functions
     sys.path.insert(0, root_dir)
-    from tools.builder import build_and_install_backend, check_device
+    from install.builder import build_and_install_backend, check_device
     from tools.patch.patch import normalize_backend
 
     # Validate device
