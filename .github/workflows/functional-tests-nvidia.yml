@@ -31,15 +31,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         env:
-          # 禁用 git 代理，避免 checkout 时使用代理
+          # unset git proxy, avoid using proxy when checking out code
           http_proxy: ""
           https_proxy: ""
           HTTP_PROXY: ""
           HTTPS_PROXY: ""
-          GIT_HTTP_PROXY_CMD: ""
-          GIT_PROXY_COMMAND: ""
-          no_proxy: "*"
-          NO_PROXY: "*"
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
