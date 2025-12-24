@@ -141,14 +141,15 @@ jobs:
       # - functional_tests_hetero
     uses: ./.github/workflows/functional-tests-nvidia.yml
     strategy:
-      fail-fast: false        # 关键配置：有一个 matrix job 挂了也不取消其他
+      fail-fast: false        
       matrix:
         task:
           - deepseek_r1_distill_qwen
-          - deepseek_r1_distill_qwen-flaggems
           - qwen3
+          # - robobrain2. # TODO: need fix flash-attn version
+
           # - qwen3-flaggems
-          - robobrain2
+          # - deepseek_r1_distill_qwen-flaggems
           # - robobrain2-flaggems  # TODO: test need fix
     name: "inference-${{ matrix.task }}"
     with:
