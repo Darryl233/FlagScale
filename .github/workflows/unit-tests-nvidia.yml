@@ -25,6 +25,7 @@ jobs:
         - /home/flagscale_cicd/flask/config:/workspace/config
         - /home/flagscale_cicd/docker/docker_build/docker_data:/home/gitlab-runner/data
         - /home/flagscale_cicd/docker/docker_build/docker_tokenizers:/home/gitlab-runner/tokenizers
+        - /home/flagscale_cicd/sccache:/root/.cache/sccache
       options: --gpus all --shm-size=500g --hostname flagscale_cicd --user root --ulimit nofile=65535:65535
     steps:
       - name: Checkout Code
@@ -64,7 +65,12 @@ jobs:
           cp -r /__w/FlagScale/FlagScale/. $TMP_DIR
           cd $TMP_DIR
           trap 'echo "Cleaning up temporary directory..."; rm -rf "$TMP_DIR"' EXIT
-
+          export SCCACHE_DIR=/root/.cache/sccache
+          export CMAKE_C_COMPILER_LAUNCHER=$(which sccache)
+          export CMAKE_CXX_COMPILER_LAUNCHER=$(which sccache)
+          export CMAKE_CUDA_COMPILER_LAUNCHER=$(which sccache)
+          sccache --start-server
+          sccache --show-stats
           if [ "${{ inputs.backend }}" = "train_megatron" ] || [ "${{ inputs.backend }}" = "train_flagscale" ]; then
             echo ""
             # For megatron unit tests. See details in https://github.com/NVIDIA/Megatron-LM/blob/8479eb35fbca9631acb846c3ad5d868e02214227/tests/unit_tests/conftest.py#L78
@@ -82,6 +88,7 @@ jobs:
             echo "Unknown backend type: ${{ inputs.backend }}"
             exit 1
           fi
+          sccache --show-stats
 
           tests/scripts/unit_tests/test_subset.sh --backend ${{ inputs.backend }} --subset ${{ inputs.subset }} --id ${{ github.sha }}
         shell: bash
