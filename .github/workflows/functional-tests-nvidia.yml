@@ -73,6 +73,8 @@ jobs:
           elif [ "${{ inputs.type }}" = "inference" ] || [ "${{ inputs.type }}" = "serve" ]; then
             source /root/miniconda3/bin/activate flagscale-inference
             export SCCACHE_DIR=/root/.cache/sccache
+            export SCCACHE_CACHE_SIZE="100G"
+
             export CMAKE_C_COMPILER_LAUNCHER=$(which sccache)
             export CMAKE_CXX_COMPILER_LAUNCHER=$(which sccache)
             export CMAKE_CUDA_COMPILER_LAUNCHER=$(which sccache)
