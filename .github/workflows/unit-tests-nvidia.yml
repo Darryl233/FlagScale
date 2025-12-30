@@ -57,7 +57,7 @@ jobs:
           whoami
           git config --global --add safe.directory /__w/FlagScale/FlagScale
           
-          TMP_DIR=$(mktemp -d)
+          TMP_DIR=/tmp/flagscale_tmp
           echo "Copying source to temporary directory: $TMP_DIR"
           rm -rf $TMP_DIR
           mkdir -p $TMP_DIR
