@@ -6,9 +6,10 @@ on:
       type:
         required: true
         type: string
-      task:
+      tasks:
         required: true
         type: string
+        description: "Space-separated list of tasks to test"
       image:
         required: true
         type: string
@@ -64,7 +65,8 @@ jobs:
           if [ "${{ inputs.type }}" = "train" ] || [ "${{ inputs.type }}" = "hetero_train" ]; then
             source /root/miniconda3/bin/activate flagscale-train
             python tools/patch/unpatch.py --backend Megatron-LM
-            if [ "${{ inputs.task }}" = "llava_onevision" ]; then
+            # Check if llava_onevision is in the tasks list
+            if echo "${{ inputs.tasks }}" | grep -q "llava_onevision"; then
               python tools/patch/unpatch.py --backend Megatron-Energon
               # PYTHONPATH=./:$PYTHONPATH pip install . --no-build-isolation --verbose --config-settings=device="gpu" --config-settings=backend="Megatron-Energon"
               cp -r third_party/Megatron-Energon/src/megatron/energon third_party/Megatron-LM/megatron
@@ -169,8 +171,33 @@ jobs:
             echo "Unknown backend type: ${{ inputs.type }}"
             exit 1
           fi
-          tests/scripts/functional_tests/test_task.sh --type ${{ inputs.type }} --task ${{ inputs.task }}
-          exit_code=$?
-          echo "Exit code: $exit_code"
-          exit $exit_code
+
+          # Run all tasks in sequence within the same container
+          failed_tasks=()
+          for task in ${{ inputs.tasks }}; do
+            echo "=========================================="
+            echo "Running test task: $task (type: ${{ inputs.type }})"
+            echo "=========================================="
+            if ! tests/scripts/functional_tests/test_task.sh --type ${{ inputs.type }} --task "$task"; then
+              failed_tasks+=("$task")
+              echo "Test task '$task' failed!"
+            else
+              echo "Test task '$task' passed!"
+            fi
+          done
+
+          # Report results
+          if [ ${#failed_tasks[@]} -gt 0 ]; then
+            echo "=========================================="
+            echo "Failed test tasks:"
+            for task in "${failed_tasks[@]}"; do
+              echo "  - $task"
+            done
+            echo "=========================================="
+            exit 1
+          else
+            echo "=========================================="
+            echo "All test tasks passed!"
+            echo "=========================================="
+          fi
         shell: bash

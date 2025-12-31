@@ -39,154 +39,94 @@ jobs:
         run: |
           echo "ci_image=localhost:5000/flagscale:cuda12.8.1-cudnn9.7.1-python3.12-torch2.7.1-time2510131515" >> $GITHUB_OUTPUT  # Set output variable
 
-  # Train Megatron Unit Tests with Matrix
+  # Train Megatron Unit Tests - All subsets in one container
   unit_tests_train_megatron:
     needs:
       - set-env
     uses: ./.github/workflows/unit-tests-nvidia.yml
-    strategy:
-      matrix:
-        subset:
-          - data
-          - dist_checkpointing
-          - distributed
-          - export
-          - fusions
-          - inference
-          - models
-          - pipeline_parallel
-          - post_training
-          - ssm
-          - tensor_parallel
-          - transformer/moe
-          - transformer
-          - ./
-    name: "train_megatron-${{ matrix.subset == './' && 'root' || matrix.subset }}"
     with:
       backend: train_megatron
-      subset: ${{ matrix.subset }}
+      subsets: "data dist_checkpointing distributed export fusions inference models pipeline_parallel post_training ssm tensor_parallel transformer/moe transformer ./"
       image: ${{ needs.set-env.outputs.ci_image }}
 
-  # Train Flagscale Unit Tests with Matrix
+  # Train Flagscale Unit Tests - All subsets in one container
   unit_tests_train_flagscale:
     needs:
       - set-env
       - unit_tests_train_megatron
     uses: ./.github/workflows/unit-tests-nvidia.yml
-    strategy:
-      matrix:
-        subset:
-          - runner
-          - ./
-    name: "train_flagscale-${{ matrix.subset == './' && 'root' || matrix.subset }}"
     with:
       backend: train_flagscale
-      subset: ${{ matrix.subset }}
+      subsets: "runner ./"
       image: ${{ needs.set-env.outputs.ci_image }}
 
-  # Inference Flagscale Unit Tests with Matrix
+  # Inference Flagscale Unit Tests - All subsets in one container
   unit_tests_inference_flagscale:
     needs:
       - set-env
     uses: ./.github/workflows/unit-tests-nvidia.yml
-    strategy:
-      matrix:
-        subset:
-          - inference
-          - transformations
-    name: "inference_flagscale-${{ matrix.subset == './' && 'root' || matrix.subset }}"
     with:
       backend: inference_flagscale
-      subset: ${{ matrix.subset }}
+      subsets: "inference transformations"
       image: ${{ needs.set-env.outputs.ci_image }}
 
-  # Functional Tests with Mision and Type Matrix
+  # Functional Tests Train - All tasks in one container
   functional_tests_train:
     needs:
       - set-env
       - unit_tests_train_flagscale
     uses: ./.github/workflows/functional-tests-nvidia.yml
-    strategy:
-      matrix:
-        task:
-          - aquila
-          - deepseek
-          - mixtral
-          # - llava_onevision # TODO: test need fix
-    name: "train-${{ matrix.task }}"
     with:
-      task: ${{ matrix.task }}
       type: train
+      tasks: "aquila deepseek mixtral"
+      # llava_onevision # TODO: test need fix
       image: ${{ needs.set-env.outputs.ci_image }}
 
+  # Functional Tests Hetero Train - All tasks in one container
   functional_tests_hetero:
     needs:
       - set-env
       - functional_tests_train
-    # TODO: test need fix
     uses: ./.github/workflows/functional-tests-nvidia.yml
-    strategy:
-      matrix:
-        task:
-          - aquila
-    name: "hetero_train-${{ matrix.task }}"
     with:
-      task: ${{ matrix.task }}
       type: hetero_train
+      tasks: "aquila"
+      # TODO: test need fix
       image: ${{ needs.set-env.outputs.ci_image }}
 
+  # Functional Tests Inference - All tasks in one container
   functional_tests_inference:
     needs:
       - set-env
       - unit_tests_inference_flagscale
     uses: ./.github/workflows/functional-tests-nvidia.yml
-    strategy:
-      matrix:
-        task:
-          - deepseek_r1_distill_qwen
-          - qwen3
-          - robobrain2
-
-          # need fix
-          # - deepseek_r1_distill_qwen-flaggems
-          # - qwen3-flaggems
-          # - robobrain2-flaggems
-
-    name: "inference-${{ matrix.task }}"
     with:
-      task: ${{ matrix.task }}
       type: inference
+      tasks: "deepseek_r1_distill_qwen qwen3 robobrain2"
+      # need fix
+      # deepseek_r1_distill_qwen-flaggems qwen3-flaggems robobrain2-flaggems
       image: ${{ needs.set-env.outputs.ci_image }}
 
+  # Functional Tests Serve - All tasks in one container
   functional_tests_serve:
     needs:
       - set-env
       - functional_tests_inference
     uses: ./.github/workflows/functional-tests-nvidia.yml
-    strategy:
-      matrix:
-        task:
-          - qwen2_5
-          - base
-    name: "serve-${{ matrix.task }}"
     with:
-      task: ${{ matrix.task }}
       type: serve
+      tasks: "qwen2_5 base"
       image: ${{ needs.set-env.outputs.ci_image }}
 
+  # Functional Tests RL - All tasks in one container
   functional_tests_rl:
     needs:
       - set-env
       - functional_tests_hetero
     uses: ./.github/workflows/functional-tests-nvidia.yml
-    strategy:
-      matrix:
-        task:
-          - qwen2_5
-    name: "rl-${{ matrix.task }}"
     with:
-      task: ${{ matrix.task }}
       type: rl
+      tasks: "qwen2_5"
       image: ${{ needs.set-env.outputs.ci_image }}
 
   # Check All Tests
