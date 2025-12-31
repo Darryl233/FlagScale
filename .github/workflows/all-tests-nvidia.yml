@@ -145,9 +145,9 @@ jobs:
         task:
           - deepseek_r1_distill_qwen
           - qwen3
+          - robobrain2
 
           # need fix
-          # - robobrain2
           # - deepseek_r1_distill_qwen-flaggems
           # - qwen3-flaggems
           # - robobrain2-flaggems
