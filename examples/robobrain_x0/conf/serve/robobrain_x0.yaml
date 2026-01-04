@@ -1,6 +1,6 @@
 - serve_id: vllm_model
   engine_args:
-    model: model: /models/BAAI/RoboBrain-X0-Preview
+    model: /models/BAAI/RoboBrain-X0-Preview
     model_sub_task: /models/BAAI/RoboBrain-X0-Preview
     subtask_mode: true
     host: 0.0.0.0
