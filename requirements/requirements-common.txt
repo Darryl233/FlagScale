@@ -12,6 +12,25 @@ tensorboard
 ray
 pybase64
 orjson
+diffusers
+translate
+imageio
+python-multipart
+imageio[ffmpeg]
+ks3sdk
+pyarrow
+pandas
+h5py
+flask
+flask_cors
+tqdm_loggable
+types_boto3_s3
+qwen_vl_utils 
+scipy
+pynvml
+webdataset
+epath
+wandb
 
 # test
 coverage
@@ -21,3 +40,4 @@ pytest-cov
 pytest_mock
 pytest-random-order
 wandb
+
