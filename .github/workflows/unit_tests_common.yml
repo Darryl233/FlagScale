@@ -220,8 +220,8 @@ jobs:
           echo "Python location: $(which python)"
           echo "Python version: $(python --version)"
 
-          # Install pytest-cov if not already present
-          pip install pytest-cov --quiet
+          # Install coverage if not already present
+          pip install coverage --quiet
 
           # Export COVERAGE_DIR so run_unit_tests.sh can pick it up
           export COVERAGE_DIR="$PROJECT_ROOT/coverage-report"
@@ -253,6 +253,8 @@ jobs:
       - name: Upload coverage report to FlagCICD
         if: always()
         uses: flagos-ai/FlagOps/actions/post-pytest-report@v1
+        env: 
+          NO_PROXY: "10.1.4.167"
         with:
           backend_url: 'http://10.1.4.167:30180/flagcicd-backend/metrics/'
           report_path: '${{ env.PROJECT_ROOT }}/coverage-report/coverage.json'
