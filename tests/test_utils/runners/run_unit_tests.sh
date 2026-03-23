@@ -75,12 +75,19 @@ run_unit_tests_for_device() {
     INCLUDE=$(echo "$PATTERN_OUTPUT" | grep "^INCLUDE=" | cut -d= -f2-)
     EXCLUDE=$(echo "$PATTERN_OUTPUT" | grep "^EXCLUDE=" | cut -d= -f2-)
 
+    # Build coverage args if COVERAGE_DIR is set
+    COVERAGE_ARGS=""
+    if [ -n "${COVERAGE_DIR:-}" ]; then
+        mkdir -p "$COVERAGE_DIR"
+        COVERAGE_ARGS="--cov=$PROJECT_ROOT --cov-report=term-missing --cov-report=json:$COVERAGE_DIR/coverage.json"
+    fi
+
     # Build pytest command with torchrun for distributed test support
-    PYTEST_CMD="torchrun --nproc_per_node=8 -m pytest tests/unit_tests/ -v --tb=short"
+    PYTEST_CMD="torchrun --nproc_per_node=8 -m pytest tests/unit_tests/ -v --tb=short $COVERAGE_ARGS"
     wait_for_gpu
     # Apply exclude patterns if any
     if [ -n "$EXCLUDE" ]; then
-        PYTEST_CMD="torchrun --nproc_per_node=8 -m pytest $EXCLUDE tests/unit_tests/ -v --tb=short"
+        PYTEST_CMD="torchrun --nproc_per_node=8 -m pytest $EXCLUDE tests/unit_tests/ -v --tb=short $COVERAGE_ARGS"
     fi
 
     log_info "Command: $PYTEST_CMD"
