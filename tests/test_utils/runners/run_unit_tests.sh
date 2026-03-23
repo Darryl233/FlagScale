@@ -76,10 +76,21 @@ run_unit_tests_for_device() {
     EXCLUDE=$(echo "$PATTERN_OUTPUT" | grep "^EXCLUDE=" | cut -d= -f2-)
 
     # Build coverage args if COVERAGE_DIR is set
+    # torchrun spawns multiple processes, so we use parallel mode:
+    # each process writes its own .coverage.* file, then we combine them after the run.
     COVERAGE_ARGS=""
     if [ -n "${COVERAGE_DIR:-}" ]; then
         mkdir -p "$COVERAGE_DIR"
-        COVERAGE_ARGS="--cov=$PROJECT_ROOT --cov-report=term-missing --cov-report=json:$COVERAGE_DIR/coverage.json"
+        COVERAGERC="$COVERAGE_DIR/.coveragerc"
+        cat > "$COVERAGERC" <<EOF
+[run]
+parallel = true
+concurrency = multiprocessing
+source = $PROJECT_ROOT
+data_file = $COVERAGE_DIR/.coverage
+EOF
+        export COVERAGE_PROCESS_START="$COVERAGERC"
+        COVERAGE_ARGS="--cov=$PROJECT_ROOT --cov-config=$COVERAGERC --no-cov-on-fail"
     fi
 
     # Auto-detect number of GPUs
@@ -99,7 +110,15 @@ run_unit_tests_for_device() {
 
     # Run unit tests
     eval "$PYTEST_CMD"
-    return $?
+    local test_exit=$?
+
+    # Combine parallel coverage files and generate JSON report
+    if [ -n "${COVERAGE_DIR:-}" ]; then
+        coverage combine --rcfile="$COVERAGERC" "$COVERAGE_DIR" 2>/dev/null || true
+        coverage json --rcfile="$COVERAGERC" -o "$COVERAGE_DIR/coverage.json" 2>/dev/null || true
+    fi
+
+    return $test_exit
 }
 
 # If device is specified, run for that device only
