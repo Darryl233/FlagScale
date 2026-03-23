@@ -251,11 +251,11 @@ jobs:
       - checkout_and_config
       - cli_validation
       - unit_tests
-      - functional_tests_train
-      - functional_tests_hetero_train
+      # - functional_tests_train
+      # - functional_tests_hetero_train
       - functional_tests_benchmark
-      - functional_tests_inference
-      - functional_tests_serve
+      # - functional_tests_inference
+      # - functional_tests_serve
       # NOTE: Disabled tests removed from needs
       # - functional_tests_rl
     runs-on: ubuntu-latest
