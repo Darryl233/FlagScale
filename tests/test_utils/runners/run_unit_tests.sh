@@ -82,12 +82,17 @@ run_unit_tests_for_device() {
         COVERAGE_ARGS="--cov=$PROJECT_ROOT --cov-report=term-missing --cov-report=json:$COVERAGE_DIR/coverage.json"
     fi
 
+    # Auto-detect number of GPUs
+    NPROC=$(python -c "import torch; print(torch.cuda.device_count())" 2>/dev/null || echo "1")
+    [ "$NPROC" -le 0 ] 2>/dev/null && NPROC=1
+    log_info "Detected $NPROC GPU(s)"
+
     # Build pytest command with torchrun for distributed test support
-    PYTEST_CMD="torchrun --nproc_per_node=8 -m pytest tests/unit_tests/ -v --tb=short $COVERAGE_ARGS"
+    PYTEST_CMD="torchrun --nproc_per_node=$NPROC -m pytest tests/unit_tests/ -v --tb=short $COVERAGE_ARGS"
     wait_for_gpu
     # Apply exclude patterns if any
     if [ -n "$EXCLUDE" ]; then
-        PYTEST_CMD="torchrun --nproc_per_node=8 -m pytest $EXCLUDE tests/unit_tests/ -v --tb=short $COVERAGE_ARGS"
+        PYTEST_CMD="torchrun --nproc_per_node=$NPROC -m pytest $EXCLUDE tests/unit_tests/ -v --tb=short $COVERAGE_ARGS"
     fi
 
     log_info "Command: $PYTEST_CMD"
