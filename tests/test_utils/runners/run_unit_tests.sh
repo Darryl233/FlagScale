@@ -85,7 +85,6 @@ run_unit_tests_for_device() {
         cat > "$COVERAGERC" <<EOF
 [run]
 parallel = true
-concurrency = multiprocessing
 source = $PROJECT_ROOT
 data_file = $COVERAGE_DIR/.coverage
 EOF
