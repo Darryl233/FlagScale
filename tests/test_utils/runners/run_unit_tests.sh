@@ -75,11 +75,10 @@ run_unit_tests_for_device() {
     INCLUDE=$(echo "$PATTERN_OUTPUT" | grep "^INCLUDE=" | cut -d= -f2-)
     EXCLUDE=$(echo "$PATTERN_OUTPUT" | grep "^EXCLUDE=" | cut -d= -f2-)
 
-    # Build coverage args if COVERAGE_DIR is set
-    # torchrun spawns multiple processes, so we use parallel mode:
-    # each process writes its own .coverage.* file, then we combine them after the run.
-    COVERAGE_ARGS=""
+    # Build coverage config if COVERAGE_DIR is set
+    USE_COVERAGE=false
     if [ -n "${COVERAGE_DIR:-}" ]; then
+        USE_COVERAGE=true
         mkdir -p "$COVERAGE_DIR"
         COVERAGERC="$COVERAGE_DIR/.coveragerc"
         cat > "$COVERAGERC" <<EOF
@@ -88,7 +87,6 @@ parallel = true
 source = $PROJECT_ROOT
 data_file = $COVERAGE_DIR/.coverage
 EOF
-        COVERAGE_ARGS="--cov=$PROJECT_ROOT --cov-config=$COVERAGERC --no-cov-on-fail"
     fi
 
     # Auto-detect number of GPUs
@@ -96,12 +94,19 @@ EOF
     [ "$NPROC" -le 0 ] 2>/dev/null && NPROC=1
     log_info "Detected $NPROC GPU(s)"
 
-    # Build pytest command with torchrun for distributed test support
-    PYTEST_CMD="torchrun --nproc_per_node=$NPROC -m pytest tests/unit_tests/ -v --tb=short $COVERAGE_ARGS"
+    # Use 'coverage run' instead of pytest-cov to avoid SQLite concurrent write conflicts:
+    # each torchrun rank writes its own .coverage.<host>.<pid>.<random> fragment independently.
+    if [ "$USE_COVERAGE" = true ]; then
+        RUNNER_CMD="-m coverage run --rcfile=$COVERAGERC -m pytest"
+    else
+        RUNNER_CMD="-m pytest"
+    fi
+
+    PYTEST_CMD="torchrun --nproc_per_node=$NPROC $RUNNER_CMD tests/unit_tests/ -v --tb=short"
     wait_for_gpu
     # Apply exclude patterns if any
     if [ -n "$EXCLUDE" ]; then
-        PYTEST_CMD="torchrun --nproc_per_node=$NPROC -m pytest $EXCLUDE tests/unit_tests/ -v --tb=short $COVERAGE_ARGS"
+        PYTEST_CMD="torchrun --nproc_per_node=$NPROC $RUNNER_CMD $EXCLUDE tests/unit_tests/ -v --tb=short"
     fi
 
     log_info "Command: $PYTEST_CMD"
@@ -110,8 +115,9 @@ EOF
     eval "$PYTEST_CMD"
     local test_exit=$?
 
-    # Combine parallel coverage files and generate JSON report
-    if [ -n "${COVERAGE_DIR:-}" ]; then
+    # All ranks have exited — safe to combine fragment files and generate report
+    if [ "$USE_COVERAGE" = true ]; then
+        log_info "Combining distributed coverage data..."
         coverage combine --rcfile="$COVERAGERC" "$COVERAGE_DIR" 2>/dev/null || true
         coverage json --rcfile="$COVERAGERC" -o "$COVERAGE_DIR/coverage.json" 2>/dev/null || true
     fi
