@@ -50,7 +50,7 @@ jobs:
         shell: bash
     env:
       PROJECT_ROOT: /tmp/FlagScale
-    runs-on: ${{ fromJson(inputs.runs_on) }}
+    runs-on: flagscale-nvidia-test
     name: unit-${{ inputs.device }}
     container:
       image: ${{ inputs.image }}
