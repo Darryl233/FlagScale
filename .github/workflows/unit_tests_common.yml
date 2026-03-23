@@ -53,7 +53,7 @@ jobs:
     runs-on: flagscale-nvidia-test
     name: unit-${{ inputs.device }}
     container:
-      image: ${{ inputs.image }}
+      image: harbor.baai.ac.cn/flagscale/flagscale-inference:dev-cu128-py3.12-20260302102033
       ports:
         - 80
       volumes: ${{ fromJson(inputs.container_volumes) }}
