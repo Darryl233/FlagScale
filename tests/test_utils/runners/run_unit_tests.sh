@@ -88,7 +88,6 @@ parallel = true
 source = $PROJECT_ROOT
 data_file = $COVERAGE_DIR/.coverage
 EOF
-        export COVERAGE_PROCESS_START="$COVERAGERC"
         COVERAGE_ARGS="--cov=$PROJECT_ROOT --cov-config=$COVERAGERC --no-cov-on-fail"
     fi
 
