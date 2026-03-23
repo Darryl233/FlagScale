@@ -282,6 +282,8 @@ jobs:
       - name: Upload benchmark data to backend
         if: always() && steps.benchmark_test.outcome == 'success'
         uses: flagos-ai/FlagOps/actions/post-benchmark-report@main
+        env:
+          NO_PROXY: "10.1.4.167"
         with:
           backend_url: 'http://10.1.4.167:30180'
           report_path: ${{ env.PROJECT_ROOT }}/tests/functional_tests/${{ matrix.test_config.task }}/${{ matrix.test_config.model }}/test_results/${{ matrix.test_config.case }}/logs/benchmark_metrics.json
