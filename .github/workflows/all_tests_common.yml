@@ -107,7 +107,7 @@ jobs:
     with:
       platform: ${{ inputs.platform }}
       image: ${{ needs.checkout_and_config.outputs.ci_train_image }}
-      runs_on: ${{ needs.checkout_and_config.outputs.runs_on }}
+      runs_on: "flagscale-nvidia-test"
       container_volumes: ${{ needs.checkout_and_config.outputs.container_volumes }}
       container_options: ${{ needs.checkout_and_config.outputs.container_options }}
       source_artifact: flagscale-source-${{ github.sha }}
