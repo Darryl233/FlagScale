@@ -131,7 +131,7 @@ jobs:
       container_options: ${{ needs.checkout_and_config.outputs.container_options }}
       source_artifact: flagscale-source-${{ github.sha }}
       pkg_mgr: ${{ needs.checkout_and_config.outputs.pkg_mgr }}
-      env_name: ${{ needs.checkout_and_config.outputs.env_name_train }}
+      env_name: ${{ needs.checkout_and_config.outputs.env_name_inference }}
       env_path: ${{ needs.checkout_and_config.outputs.env_path }}
 
   functional_tests_train:
