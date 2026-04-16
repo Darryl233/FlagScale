@@ -61,7 +61,7 @@ jobs:
             - summary: brief one-sentence explanation
           claude_args: |
             --json-schema '{"type":"object","properties":{"is_flaky":{"type":"boolean","description":"Whether this appears to be a flaky test failure"},"confidence":{"type":"number","minimum":0,"maximum":1,"description":"Confidence level in the determination"},"summary":{"type":"string","description":"One-sentence explanation of the failure"}},"required":["is_flaky","confidence","summary"]}'
-            --model mco-4          
+            --model mco-4
 
       # Auto-retry only if flaky AND high confidence (>= 0.7)
       - name: Retry flaky tests
