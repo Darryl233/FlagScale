@@ -9,19 +9,10 @@ on:
   workflow_run:
     workflows:
       - ascend_tests
-      - Common All Tests
       - cuda_tests
       - metax_c500_tests
       - format_check
-      - Common Functional Tests - Benchmark
-      - Common Functional Tests - CLI
-      - Common Functional Tests - Heterogeneous Training
-      - Common Functional Tests - Inference
       - Functional Tests - Training (Megatron-LM-FL)
-      - Common Functional Tests - RL
-      - Common Functional Tests - Serve
-      - Common Functional Tests - Training
-      - Common Unit Tests
     types: [completed]
 
 permissions:
