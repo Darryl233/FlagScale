@@ -55,6 +55,12 @@ jobs:
             --json-schema '{"type":"object","properties":{"is_flaky":{"type":"boolean","description":"Whether this appears to be a flaky test failure"},"confidence":{"type":"number","minimum":0,"maximum":1,"description":"Confidence level in the determination"},"summary":{"type":"string","description":"One-sentence explanation of the failure"}},"required":["is_flaky","confidence","summary"]}'
             --model mco-4
 
+      - name: Debug detect output
+        if: always()
+        run: |
+          echo "structured_output: ${{ steps.detect.outputs.structured_output }}"
+          echo "result: ${{ steps.detect.outputs.result }}"
+
       # Auto-retry only if flaky AND high confidence (>= 0.7)
       - name: Retry flaky tests
         if: |
