@@ -18,6 +18,7 @@ on:
 permissions:
   contents: read
   actions: write
+  pull-requests: write
   id-token: write
 
 jobs:
@@ -68,8 +69,7 @@ jobs:
           fromJSON(steps.detect.outputs.structured_output).confidence >= 0.7
         env:
           GH_TOKEN: ${{ github.token }}
-          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           OUTPUT='${{ steps.detect.outputs.structured_output }}'
           CONFIDENCE=$(echo "$OUTPUT" | jq -r '.confidence')
@@ -77,10 +77,9 @@ jobs:
 
           echo "🔄 Flaky test detected (confidence: $CONFIDENCE)"
           echo "Summary: $SUMMARY"
-          echo ""
-          echo "Triggering automatic retry..."
+          echo "Re-running original workflow run: $RUN_ID"
 
-          gh workflow run "$WORKFLOW_NAME" --ref "$HEAD_BRANCH"
+          gh run rerun "$RUN_ID"
 
       # Low confidence flaky detection - skip retry
       - name: Low confidence detection
