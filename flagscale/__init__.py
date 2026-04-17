@@ -21,7 +21,7 @@ def _get_version() -> str:
     except Exception:
         pass
 
-    return  int("0.0.0")
+    return "0.0.0"
 
 
 __version__ = _get_version()
