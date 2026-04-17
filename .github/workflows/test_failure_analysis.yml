@@ -97,7 +97,7 @@ jobs:
           CONFIDENCE=$(echo "$OUTPUT" | jq -r '.confidence')
           SUMMARY=$(echo "$OUTPUT" | jq -r '.summary')
 
-          echo "🔄 Flaky test detected (confidence: $CONFIDENCE)"
+          echo "Flaky test detected (confidence: $CONFIDENCE)"
           echo "Summary: $SUMMARY"
           echo "Re-running original workflow run: $RUN_ID"
 
@@ -112,7 +112,7 @@ jobs:
           OUTPUT='${{ steps.detect.outputs.structured_output }}'
           CONFIDENCE=$(echo "$OUTPUT" | jq -r '.confidence')
 
-          echo "⚠️ Possible flaky test but confidence too low ($CONFIDENCE)"
+          echo "Possible flaky test but confidence too low ($CONFIDENCE)"
           echo "Not retrying automatically - manual review recommended"
 
       # Deep analysis for real bug failures
@@ -187,12 +187,12 @@ jobs:
 
           if [ "$IS_FLAKY" = "true" ]; then
             gh pr comment "$PR_NUMBER" --body "$(cat <<EOF
-          ## 🔄 Flaky Test Detected
+          ## Flaky Test Detected
 
           **Analysis**: ${SUMMARY}
           **Confidence**: ${CONFIDENCE}
 
-          ✅ Automatically retrying the workflow.
+          Automatically retrying the workflow.
 
           [View workflow run](${{ github.event.workflow_run.html_url }})
           EOF
@@ -207,16 +207,16 @@ jobs:
             FAILED_TESTS=$(jq -r '.failed_tests | map("- `" + . + "`") | join("\n")' /tmp/analyze_output.json)
             SUGGESTIONS=$(jq -r '.suggestions | to_entries | map(
               "### " + ((.key + 1) | tostring) + ". " + .value.description +
-              (if .value.file_path then "\n📄 **File**: `" + .value.file_path + "`" else "" end) +
+              (if .value.file_path then "\n**File**: `" + .value.file_path + "`" else "" end) +
               (if .value.code_snippet then "\n```suggestion\n" + .value.code_snippet + "\n```" else "" end)
             ) | join("\n\n")' /tmp/analyze_output.json)
 
-            SEVERITY_ICON="⚠️"
-            [ "$SEVERITY" = "critical" ] && SEVERITY_ICON="🔴"
-            [ "$SEVERITY" = "minor" ] && SEVERITY_ICON="🟡"
+            SEVERITY_ICON="[WARNING]"
+            [ "$SEVERITY" = "critical" ] && SEVERITY_ICON="[CRITICAL]"
+            [ "$SEVERITY" = "minor" ] && SEVERITY_ICON="[MINOR]"
 
             gh pr comment "$PR_NUMBER" --body "$(cat <<EOF
-          ## ❌ Test Failure Analysis
+          ## Test Failure Analysis
 
           ${SEVERITY_ICON} **Severity**: ${SEVERITY}
 
