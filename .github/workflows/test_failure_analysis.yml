@@ -50,6 +50,8 @@ jobs:
           prompt: |
             The CI workflow "${{ github.event.workflow_run.name }}" failed: ${{ github.event.workflow_run.html_url }}
 
+            IMPORTANT: You are in READ-ONLY analysis mode. Do NOT modify any files, do NOT use gh to push commits, create branches, or make any changes to the repository. Only read logs and analyze.
+
             Check the logs: gh run view ${{ github.event.workflow_run.id }} --log-failed
 
             Determine if this looks like a flaky test failure by checking for:
@@ -65,8 +67,9 @@ jobs:
             - summary: brief one-sentence explanation
           claude_args: |
             --json-schema '{"type":"object","properties":{"is_flaky":{"type":"boolean","description":"Whether this appears to be a flaky test failure"},"confidence":{"type":"number","minimum":0,"maximum":1,"description":"Confidence level in the determination"},"summary":{"type":"string","description":"One-sentence explanation of the failure"}},"required":["is_flaky","confidence","summary"]}'
-            --model mcs-5
-            --allowedTools 'Bash(gh *)' 'Read' 'Glob' 'Grep' 
+            --model ${{ vars.CLAUDE_MODEL || 'mcs-5' }}
+            --allowedTools 'Bash(gh *)' 'Read' 'Glob' 'Grep'
+            --max-turns 10
 
       - name: Debug detect output
         if: always()
@@ -128,6 +131,8 @@ jobs:
           prompt: |
             CI workflow failed and this is NOT a flaky test — it's a real bug.
 
+            IMPORTANT: You are in READ-ONLY analysis mode. Do NOT modify any files, do NOT use gh to push commits, create branches, or make any changes to the repository. Only read logs, read code, and analyze.
+
             Workflow run: ${{ github.event.workflow_run.html_url }}
 
             Step 1: Get the failed logs:
@@ -158,8 +163,9 @@ jobs:
             - severity: "critical" | "major" | "minor"
           claude_args: |
             --json-schema '{"type":"object","properties":{"failed_tests":{"type":"array","items":{"type":"string"},"description":"List of failed test names"},"root_cause":{"type":"string","description":"Detailed root cause analysis"},"suggestions":{"type":"array","items":{"type":"object","properties":{"file_path":{"type":"string"},"description":{"type":"string"},"code_snippet":{"type":"string"}},"required":["description"]},"description":"Actionable fix suggestions"},"severity":{"type":"string","enum":["critical","major","minor"],"description":"Severity level"}},"required":["failed_tests","root_cause","suggestions","severity"]}'
-            --model mcs-5
+            --model ${{ vars.CLAUDE_MODEL || 'mcs-5' }}
             --allowedTools 'Bash(gh *)' 'Read' 'Glob' 'Grep'
+            --max-turns 10
 
       # Comment on PR with analysis results
       - name: Comment on PR
