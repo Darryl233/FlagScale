@@ -38,7 +38,7 @@ jobs:
           gh run view "$RUN_ID" --json databaseId,status,conclusion,workflowName
           gh run view "$RUN_ID" --log-failed >/tmp/failed.log
           echo "Fetched failed log bytes: $(wc -c </tmp/failed.log)"
-          
+
       - name: Detect flaky test failures
         id: detect
         uses: anthropics/claude-code-action@v1
@@ -48,7 +48,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
           prompt: |
-            The CI workflow failed: ${{ github.event.workflow_run.html_url }}
+            The CI workflow "${{ github.event.workflow_run.name }}" failed: ${{ github.event.workflow_run.html_url }}
 
             Check the logs: gh run view ${{ github.event.workflow_run.id }} --log-failed
 
@@ -66,6 +66,7 @@ jobs:
           claude_args: |
             --json-schema '{"type":"object","properties":{"is_flaky":{"type":"boolean","description":"Whether this appears to be a flaky test failure"},"confidence":{"type":"number","minimum":0,"maximum":1,"description":"Confidence level in the determination"},"summary":{"type":"string","description":"One-sentence explanation of the failure"}},"required":["is_flaky","confidence","summary"]}'
             --model mco-4
+            --allowed_tools 'Bash(gh *)'
 
       - name: Debug detect output
         if: always()
@@ -158,7 +159,7 @@ jobs:
           claude_args: |
             --json-schema '{"type":"object","properties":{"failed_tests":{"type":"array","items":{"type":"string"},"description":"List of failed test names"},"root_cause":{"type":"string","description":"Detailed root cause analysis"},"suggestions":{"type":"array","items":{"type":"object","properties":{"file_path":{"type":"string"},"description":{"type":"string"},"code_snippet":{"type":"string"}},"required":["description"]},"description":"Actionable fix suggestions"},"severity":{"type":"string","enum":["critical","major","minor"],"description":"Severity level"}},"required":["failed_tests","root_cause","suggestions","severity"]}'
             --model mco-4
-
+            --allowed_tools 'Bash(gh *)'
 
       # Comment on PR with analysis results
       - name: Comment on PR
