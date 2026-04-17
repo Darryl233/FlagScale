@@ -12,7 +12,6 @@ on:
       - cuda_tests
       - metax_c500_tests
       - format_check
-      - Functional Tests - Training (Megatron-LM-FL)
     types: [completed]
 
 permissions:
