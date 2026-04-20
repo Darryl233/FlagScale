@@ -38,7 +38,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.ANTHROPIC_AUTH_TOKEN }}
           claude_args: |
-            --model mco-4
+            --model ${{ vars.CLAUDE_MODEL }}
 
           # Optional: Customize the trigger phrase (default: @claude)
           # trigger_phrase: "/claude"
