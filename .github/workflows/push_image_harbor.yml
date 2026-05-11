@@ -10,6 +10,7 @@ on:
       - 'tools/install/**'
       - 'requirements/**'
       - '.github/workflows/build_image_cuda.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
