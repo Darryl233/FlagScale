@@ -4,6 +4,8 @@ name: Demo Inference Test - Qwen3
 # Uses FlagScale inference tests from tests/functional_tests/inference/qwen3
 
 on:
+  pull_request:
+    branches: ["main"]
   workflow_dispatch:
     inputs:
       test_case:
