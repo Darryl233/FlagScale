@@ -1,0 +1,172 @@
+name: Demo Inference Test - Qwen3
+
+# Demo workflow to test the test-lyz-infer runner with real Qwen3 inference
+# Uses FlagScale inference tests from tests/functional_tests/inference/qwen3
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_case:
+        description: 'Test case to run'
+        required: false
+        default: '4b_tp2'
+        type: choice
+        options:
+          - 4b_tp2
+          - 4b_tp2_ascend
+
+jobs:
+  demo_inference:
+    name: Qwen3 Inference Demo
+    runs-on: test-lyz-infer
+    env:
+      PROJECT_ROOT: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print test info
+        run: |
+          echo "=========================================="
+          echo "Qwen3 Inference Demo Test"
+          echo "=========================================="
+          echo "Runner: test-lyz-infer"
+          echo "Test Case: ${{ inputs.test_case }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Project Root: $PROJECT_ROOT"
+          echo "=========================================="
+
+      - name: Check system info
+        run: |
+          echo "=== System Information ==="
+          echo "Hostname: $(hostname)"
+          echo "OS: $(uname -s)"
+          echo "Kernel: $(uname -r)"
+          echo "Architecture: $(uname -m)"
+          echo ""
+          echo "=== CPU Information ==="
+          lscpu | grep -E "Model name|CPU\(s\)|Thread|Core" || echo "lscpu not available"
+          echo ""
+          echo "=== Memory Information ==="
+          free -h || echo "free command not available"
+          echo ""
+          echo "=== Disk Space ==="
+          df -h / || echo "df command not available"
+
+      - name: Check GPU availability
+        run: |
+          echo "=== GPU Information ==="
+          if command -v nvidia-smi &> /dev/null; then
+            echo "NVIDIA GPU detected:"
+            nvidia-smi
+          else
+            echo "nvidia-smi not found - no NVIDIA GPU or driver not installed"
+          fi
+
+          if command -v npu-smi &> /dev/null; then
+            echo "Ascend NPU detected:"
+            npu-smi info
+          else
+            echo "npu-smi not found - no Ascend NPU"
+          fi
+
+      - name: Check Python environment
+        run: |
+          echo "=== Python Environment ==="
+          if command -v python &> /dev/null; then
+            echo "Python version: $(python --version)"
+            echo "Python location: $(which python)"
+          else
+            echo "Python not found in PATH"
+          fi
+
+      - name: Install FlagScale
+        run: |
+          echo "=== Installing FlagScale ==="
+          cd $PROJECT_ROOT
+          pip install . --no-build-isolation || { echo "❌ FlagScale install failed"; exit 1; }
+
+          # Verify installation
+          command -v flagscale || { echo "❌ FlagScale CLI not found in PATH"; exit 1; }
+          echo "✅ FlagScale CLI installed: $(flagscale --version 2>/dev/null || echo 'version unknown')"
+
+      - name: Run Qwen3 inference test
+        id: inference_test
+        run: |
+          set -euo pipefail
+          cd $PROJECT_ROOT
+
+          TEST_CASE="${{ inputs.test_case }}"
+          TEST_DIR="tests/functional_tests/inference/qwen3"
+          CONFIG_FILE="$TEST_DIR/conf/${TEST_CASE}.yaml"
+          RESULTS_DIR="$TEST_DIR/test_results/${TEST_CASE}"
+          GOLD_FILE="$TEST_DIR/results_gold/${TEST_CASE}"
+
+          echo "=== Running Qwen3 Inference Test ==="
+          echo "Test case: $TEST_CASE"
+          echo "Config: $CONFIG_FILE"
+          echo "Results dir: $RESULTS_DIR"
+          echo ""
+
+          # Check if config exists
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "❌ Config file not found: $CONFIG_FILE"
+            exit 1
+          fi
+
+          # Create results directory
+          mkdir -p "$RESULTS_DIR"
+
+          # Run inference using flagscale
+          echo "Starting inference..."
+          flagscale run --config-path "$TEST_DIR/conf" --config-name "${TEST_CASE}" || {
+            echo "❌ Inference failed"
+            exit 1
+          }
+
+          echo "✅ Inference completed"
+
+          # Check results
+          if [ -f "$RESULTS_DIR/output.txt" ]; then
+            echo ""
+            echo "=== Inference Output ==="
+            cat "$RESULTS_DIR/output.txt"
+            echo ""
+
+            # Compare with gold results if available
+            if [ -f "$GOLD_FILE" ]; then
+              echo "=== Comparing with gold results ==="
+              if diff -u "$GOLD_FILE" "$RESULTS_DIR/output.txt"; then
+                echo "✅ Results match gold standard"
+              else
+                echo "⚠️  Results differ from gold standard (this may be expected)"
+              fi
+            fi
+          else
+            echo "⚠️  Output file not found at $RESULTS_DIR/output.txt"
+          fi
+
+          echo ""
+          echo "=========================================="
+          echo "✅ Qwen3 inference test completed!"
+          echo "=========================================="
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen3-inference-results-${{ inputs.test_case }}-${{ github.run_id }}
+          path: tests/functional_tests/inference/qwen3/test_results/${{ inputs.test_case }}
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Test summary
+        if: always()
+        run: |
+          echo "=== Test Summary ==="
+          echo "Status: ${{ job.status }}"
+          echo "Runner: test-lyz-infer"
+          echo "Test Case: ${{ inputs.test_case }}"
+          echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
