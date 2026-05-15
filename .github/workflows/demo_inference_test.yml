@@ -11,7 +11,7 @@ on:
       test_case:
         description: 'Test case to run'
         required: false
-        default: '4b_tp2'
+        default: '4b_tp2_ascend'
         type: choice
         options:
           - 4b_tp2
