@@ -1,6 +1,6 @@
 llm:
-  model: /home/gitlab-runner/data/Qwen3-4B
-  tokenizer: /home/gitlab-runner/data/Qwen3-4B
+  model: /flagcicd/model/0b0ec7d3-1439-4e5d-9847-f5026942e397/latest
+  tokenizer: /flagcicd/model/0b0ec7d3-1439-4e5d-9847-f5026942e397/latest
   trust_remote_code: true
   tensor_parallel_size: 2
   pipeline_parallel_size: 1
