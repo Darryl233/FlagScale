@@ -37,6 +37,7 @@ jobs:
           echo "Workflow: ${{ github.workflow }}"
           echo "Run ID: ${{ github.run_id }}"
           echo "Project Root: $PROJECT_ROOT"
+          echo "Current User: $(whoami)"
           echo "=========================================="
 
       - name: Check system info
