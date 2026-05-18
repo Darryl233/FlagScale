@@ -34,7 +34,7 @@ jobs:
           echo "Qwen3 Inference Demo Test"
           echo "=========================================="
           echo "Runner: test-lyz-infer"
-          echo "Test Case: ${{ inputs.test_case }}"
+          echo "Test Case: ${{ inputs.test_case || '4b_tp2_ascend' }}"
           echo "Workflow: ${{ github.workflow }}"
           echo "Run ID: ${{ github.run_id }}"
           echo "Project Root: $PROJECT_ROOT"
@@ -69,7 +69,7 @@ jobs:
 
           if command -v npu-smi &> /dev/null; then
             echo "Ascend NPU detected:"
-            # npu-smi info
+            npu-smi info
           else
             echo "npu-smi not found - no Ascend NPU"
           fi
@@ -100,7 +100,7 @@ jobs:
           set -euo pipefail
           cd $PROJECT_ROOT
 
-          TEST_CASE="${{ inputs.test_case }}"
+          TEST_CASE="${{ inputs.test_case || '4b_tp2_ascend' }}"
           TEST_DIR="tests/functional_tests/inference/qwen3"
           CONFIG_FILE="$TEST_DIR/conf/${TEST_CASE}.yaml"
           RESULTS_DIR="$TEST_DIR/test_results/${TEST_CASE}"
@@ -159,8 +159,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: qwen3-inference-results-${{ inputs.test_case }}-${{ github.run_id }}
-          path: tests/functional_tests/inference/qwen3/test_results/${{ inputs.test_case }}
+          name: qwen3-inference-results-${{ inputs.test_case || '4b_tp2_ascend' }}-${{ github.run_id }}
+          path: tests/functional_tests/inference/qwen3/test_results/${{ inputs.test_case || '4b_tp2_ascend' }}
           retention-days: 7
           if-no-files-found: warn
 
@@ -170,5 +170,5 @@ jobs:
           echo "=== Test Summary ==="
           echo "Status: ${{ job.status }}"
           echo "Runner: test-lyz-infer"
-          echo "Test Case: ${{ inputs.test_case }}"
+          echo "Test Case: ${{ inputs.test_case || '4b_tp2_ascend' }}"
           echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
