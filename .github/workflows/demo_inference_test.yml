@@ -69,7 +69,7 @@ jobs:
 
           if command -v npu-smi &> /dev/null; then
             echo "Ascend NPU detected:"
-            npu-smi info
+            # npu-smi info
           else
             echo "npu-smi not found - no Ascend NPU"
           fi
