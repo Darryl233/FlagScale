@@ -123,7 +123,7 @@ jobs:
 
           # Run inference using flagscale
           echo "Starting inference..."
-          flagscale inference qwen3  --config-path "$TEST_DIR/conf" --config-name "${TEST_CASE}" --test || {
+          flagscale inference qwen3  --config "$TEST_DIR/conf/${TEST_CASE}.yaml" --test || {
             echo "❌ Inference failed"
             exit 1
           }
