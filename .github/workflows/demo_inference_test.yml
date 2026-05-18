@@ -90,6 +90,12 @@ jobs:
           cd $PROJECT_ROOT
           pip install . --no-build-isolation || { echo "❌ FlagScale install failed"; exit 1; }
 
+          # Install vllm-plugin-FL
+          pip install vllm-plugin-fl==0.1.0+vllm0.13.0 \
+            --extra-index-url https://resource.flagos.net/repository/flagos-pypi-hosted/simple \
+            || { echo "❌ vllm-plugin-FL install failed"; exit 1; }
+          echo "✅ vllm-plugin-FL installed successfully"
+
           # Verify installation
           command -v flagscale || { echo "❌ FlagScale CLI not found in PATH"; exit 1; }
           echo "✅ FlagScale CLI installed: $(flagscale --version 2>/dev/null || echo 'version unknown')"
