@@ -33,16 +33,16 @@ c500:
       # Exclude paths use pytest --ignore; nodeids use pytest --deselect.
       exclude: []
         # MetaX CI: path/hostfile tests are not stable under multi-process torchrun.
-        # - tests/unit_tests/runner/test_parse_hostfile.py
-        # - tests/unit_tests/runner/test_path_utils.py::TestResolvePath::test_check_exists_warns_on_missing
-        # - tests/unit_tests/runner/test_path_utils.py::TestResolvePath::test_check_exists_no_warning_for_existing
-        # - tests/unit_tests/runner/test_path_utils.py::TestResolvePath::test_check_exists_false_does_not_warn_on_missing
-        # - tests/unit_tests/runner/test_path_utils.py::TestResolvePath::test_default_config_key_is_empty
-        # # MetaX CI: these cases error in the current runtime/environment.
-        # - tests/unit_tests/runner/elastic/test_diagnostic.py::TestDiagnostic::test_generate_diagnostic_report_file_output
-        # - tests/unit_tests/runner/elastic/test_gpu_health_check.py::TestGPUHealthCheck::test_check_computation
-        # - tests/unit_tests/test_cli.py::TestResolveConfig::test_from_model_name_aquila
-        # - tests/unit_tests/test_init.py::test_get_version_from_importlib_metadata
-        # - tests/unit_tests/test_init.py::test_get_version_fallback_to_pyproject
-        # - tests/unit_tests/test_init.py::test_get_version_fallback_to_default
-        # - tests/unit_tests/test_parallel_context.py::test_parallel_config
+        - tests/unit_tests/runner/test_parse_hostfile.py
+        - tests/unit_tests/runner/test_path_utils.py::TestResolvePath::test_check_exists_warns_on_missing
+        - tests/unit_tests/runner/test_path_utils.py::TestResolvePath::test_check_exists_no_warning_for_existing
+        - tests/unit_tests/runner/test_path_utils.py::TestResolvePath::test_check_exists_false_does_not_warn_on_missing
+        - tests/unit_tests/runner/test_path_utils.py::TestResolvePath::test_default_config_key_is_empty
+        # MetaX CI: these cases error in the current runtime/environment.
+        - tests/unit_tests/runner/elastic/test_diagnostic.py::TestDiagnostic::test_generate_diagnostic_report_file_output
+        - tests/unit_tests/runner/elastic/test_gpu_health_check.py::TestGPUHealthCheck::test_check_computation
+        - tests/unit_tests/test_cli.py::TestResolveConfig::test_from_model_name_aquila
+        - tests/unit_tests/test_init.py::test_get_version_from_importlib_metadata
+        - tests/unit_tests/test_init.py::test_get_version_fallback_to_pyproject
+        - tests/unit_tests/test_init.py::test_get_version_fallback_to_default
+        - tests/unit_tests/test_parallel_context.py::test_parallel_config
