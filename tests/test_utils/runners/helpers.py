@@ -20,7 +20,8 @@ def extract_test_patterns(json_str: str) -> tuple[str, str]:
     """
     try:
         data = json.loads(json_str)
-        include = data.get("include", "*")
+        include_value = data.get("include", "*")
+        include = " ".join(include_value) if isinstance(include_value, list) else include_value
         exclude_list = data.get("exclude", [])
 
         # Convert exclude list to pytest --ignore arguments
