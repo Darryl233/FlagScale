@@ -1,4 +1,4 @@
-name: Demo Train Test - Qwen3
+name: Demo Train Test Musa - Qwen3
 
 # Demo workflow to test the flagscale-metax-c550 runner with real Qwen3 training
 # Uses FlagScale training tests from tests/functional_tests/train/qwen3
