@@ -99,6 +99,9 @@ jobs:
 
       - name: Install FlagScale
         run: |
+          source /etc/profile.d/conda.sh
+          conda activate base
+
           echo "=== Installing FlagScale ==="
           cd $PROJECT_ROOT
 
@@ -125,6 +128,9 @@ jobs:
       - name: Run Qwen3 train test
         id: train_test
         run: |
+          source /etc/profile.d/conda.sh
+          conda activate base
+          
           set -euo pipefail
           cd $PROJECT_ROOT
 
