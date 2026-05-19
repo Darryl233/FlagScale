@@ -38,6 +38,8 @@ jobs:
           echo "Run ID: ${{ github.run_id }}"
           echo "Project Root: $PROJECT_ROOT"
           echo "Current User: $(whoami)"
+          echo "=== Environment Variables ==="
+          env | sort
           echo "=========================================="
 
       - name: Check system info
