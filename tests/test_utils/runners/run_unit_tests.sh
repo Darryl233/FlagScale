@@ -101,7 +101,9 @@ EOF
 
     # Auto-detect accelerator count for the selected platform.
     NPROC=$(detect_accelerator_count "$PLATFORM")
-    [ "$NPROC" -le 0 ] 2>/dev/null && NPROC=1
+    if ! [[ "$NPROC" =~ ^[0-9]+$ ]] || [ "$NPROC" -le 0 ]; then
+        NPROC=1
+    fi
     log_info "Detected $NPROC accelerator(s)"
 
     # Use 'coverage run' instead of pytest-cov to avoid SQLite concurrent write conflicts:

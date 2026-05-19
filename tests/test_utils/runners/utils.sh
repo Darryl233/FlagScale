@@ -161,7 +161,8 @@ detect_accelerator_count() {
 
     case "$platform" in
         ascend)
-            python - <<'PY' 2>/dev/null || echo "1"
+            {
+                python - <<'PY' 2>/dev/null || true
 import torch
 try:
     import torch_npu  # noqa: F401
@@ -170,9 +171,11 @@ except Exception:
 device_count = getattr(getattr(torch, "npu", None), "device_count", None)
 print(device_count() if callable(device_count) else 1)
 PY
+            } | awk '/^[0-9]+$/ { value=$1 } END { print value ? value : 1 }'
             ;;
         metax)
-            python - <<'PY' 2>/dev/null || mx-smi --show-hwinfo 2>/dev/null | awk '/Attached GPUs/{print $NF}' || echo "1"
+            {
+                python - <<'PY' 2>/dev/null || mx-smi --show-hwinfo 2>/dev/null | awk '/Attached GPUs/{print $NF}' || true
 import torch
 if hasattr(torch, "maca") and hasattr(torch.maca, "device_count"):
     print(torch.maca.device_count())
@@ -181,12 +184,15 @@ elif hasattr(torch, "cuda") and hasattr(torch.cuda, "device_count"):
 else:
     print(1)
 PY
+            } | awk '/^[0-9]+$/ { value=$1 } END { print value ? value : 1 }'
             ;;
         *)
-            python - <<'PY' 2>/dev/null || echo "1"
+            {
+                python - <<'PY' 2>/dev/null || true
 import torch
 print(torch.cuda.device_count() if hasattr(torch, "cuda") else 1)
 PY
+            } | awk '/^[0-9]+$/ { value=$1 } END { print value ? value : 1 }'
             ;;
     esac
 }
