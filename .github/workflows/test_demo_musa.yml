@@ -1,0 +1,188 @@
+name: Demo Train Test Musa - Qwen3
+
+# Demo workflow to test the flagscale-metax-c550 runner with real Qwen3 training
+# Uses FlagScale training tests from tests/functional_tests/train/qwen3
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+    inputs:
+      test_case:
+        description: 'Test case to run'
+        required: false
+        default: '0_6b_metax'
+        type: choice
+        options:
+          - 0_6b_metax
+
+jobs:
+  demo_train:
+    name: Qwen3 Train Demo
+    runs-on: test-lyz-musa
+    env:
+      PROJECT_ROOT: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Print test info
+        run: |
+          echo "=========================================="
+          echo "Qwen3 Train Demo Test"
+          echo "=========================================="
+          echo "Runner: ${{ runner.name }}"
+          echo "Test Case: ${{ inputs.test_case || '0_6b_metax' }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Project Root: $PROJECT_ROOT"
+          echo "Current User: $(whoami)"
+          echo "=== Environment Variables ==="
+          env | sort
+          echo "=========================================="
+
+      - name: Check system info
+        run: |
+          echo "=== System Information ==="
+          echo "Hostname: $(hostname)"
+          echo "OS: $(uname -s)"
+          echo "Kernel: $(uname -r)"
+          echo "Architecture: $(uname -m)"
+          echo ""
+          echo "=== CPU Information ==="
+          lscpu | grep -E "Model name|CPU\(s\)|Thread|Core" || echo "lscpu not available"
+          echo ""
+          echo "=== Memory Information ==="
+          free -h || echo "free command not available"
+          echo ""
+          echo "=== Disk Space ==="
+          df -h / || echo "df command not available"
+
+      - name: Check GPU availability
+        run: |
+          echo "=== GPU Information ==="
+          mthreads-gmi 
+
+      - name: Check Python environment
+        run: |
+          echo "=== Python Environment ==="
+          if command -v python &> /dev/null; then
+            echo "Python version: $(python --version)"
+            echo "Python location: $(which python)"
+          else
+            echo "Python not found in PATH"
+          fi
+
+      - name: Prepare data
+        run: |
+          mkdir -p /opt/data && cd /opt/data
+          wget https://baai-flagscale.ks3-cn-beijing.ksyuncs.com/datasets/enron_emails_demo_text_document_qwen/enron_emails_demo_text_document_qwen.idx
+          wget https://baai-flagscale.ks3-cn-beijing.ksyuncs.com/datasets/enron_emails_demo_text_document_qwen/enron_emails_demo_text_document_qwen.bin
+          mkdir -p /opt/qwentokenizer && cd /opt/qwentokenizer
+          wget "https://baai-flagscale.ks3-cn-beijing.ksyuncs.com/tokenizers/qwentokenizer/tokenizer_config.json" -O tokenizer_config.json
+          wget "https://baai-flagscale.ks3-cn-beijing.ksyuncs.com/tokenizers/qwentokenizer/qwen.tiktoken" -O qwen.tiktoken
+          wget "https://baai-flagscale.ks3-cn-beijing.ksyuncs.com/tokenizers/qwentokenizer/qwen_generation_utils.py" -O qwen_generation_utils.py
+          wget "https://baai-flagscale.ks3-cn-beijing.ksyuncs.com/tokenizers/qwentokenizer/tokenization_qwen.py" -O tokenization_qwen.py
+
+      - name: Install FlagScale
+        run: |
+
+          echo "=== Installing FlagScale ==="
+          cd $PROJECT_ROOT
+
+          # Install Megatron-LM-FL
+          git clone \
+            "https://github.com/flagos-ai/Megatron-LM-FL.git" /tmp/Megatron-LM-FL
+          git -C /tmp/Megatron-LM-FL checkout d092f8df49f7c0b5b4cae42d036b7e4a26b8fc81
+
+          echo "Installing Megatron-LM-FL via pip..."
+          pip install /tmp/Megatron-LM-FL --no-build-isolation --root-user-action=ignore \
+            || { echo "Megatron-LM-FL install failed"; exit 1; }
+          echo "✅ Megatron-LM-FL installed successfully"
+
+          # Install TransformerEngine-FL and dependencies
+          git clone --depth 1 https://github.com/flagos-ai/TransformerEngine-FL.git /workspace/TransformerEngine-FL \
+            || { echo "❌ TransformerEngine-FL clone failed"; exit 1; }
+          TE_FL_SKIP_CUDA=1 pip install /workspace/TransformerEngine-FL --no-build-isolation \
+            || { echo "❌ TransformerEngine-FL install failed"; exit 1; }
+          echo "✅ TransformerEngine-FL installed successfully"
+
+          # Install FlagScale
+          pip install . --no-build-isolation || { echo "❌ FlagScale install failed"; exit 1; }
+
+          # Verify installation
+          command -v flagscale || { echo "❌ FlagScale CLI not found in PATH"; exit 1; }
+          echo "✅ FlagScale CLI installed: $(flagscale --version 2>/dev/null || echo 'version unknown')"
+
+      - name: Run Qwen3 train test
+        id: train_test
+        run: |
+
+          set -euo pipefail
+          cd $PROJECT_ROOT
+
+          TEST_CASE="${{ inputs.test_case || '0_6b_metax' }}"
+          TEST_DIR="tests/functional_tests/train/qwen3"
+          CONFIG_FILE="$TEST_DIR/conf/${TEST_CASE}.yaml"
+          RESULTS_DIR="$TEST_DIR/test_results/${TEST_CASE}"
+
+          echo "=== Running Qwen3 Train Test ==="
+          echo "Test case: $TEST_CASE"
+          echo "Config: $CONFIG_FILE"
+          echo "Results dir: $RESULTS_DIR"
+          echo ""
+
+          # Check if config exists
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "❌ Config file not found: $CONFIG_FILE"
+            exit 1
+          fi
+
+          echo "Starting training..."
+          flagscale train qwen3 --config "$CONFIG_FILE" --test || {
+            echo "❌ Training failed"
+            exit 1
+          }
+
+          echo "✅ Training completed"
+
+          # Check results
+          if [ -d "$RESULTS_DIR" ]; then
+            echo ""
+            echo "=== Training Results ==="
+            ls -la "$RESULTS_DIR"
+            echo ""
+
+            # Check for loss log if available
+            if [ -f "$RESULTS_DIR/hydra/logs/flagscale/flagscale.log" ]; then
+              echo "=== Training Log (last 50 lines) ==="
+              tail -50 "$RESULTS_DIR/hydra/logs/flagscale/flagscale.log"
+              echo ""
+            fi
+          else
+            echo "⚠️  Results directory not found at $RESULTS_DIR"
+          fi
+
+          echo ""
+          echo "=========================================="
+          echo "✅ Qwen3 train test completed!"
+          echo "=========================================="
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen3-train-results-${{ inputs.test_case || '0_6b_metax' }}-${{ github.run_id }}
+          path: tests/functional_tests/train/qwen3/test_results/${{ inputs.test_case || '0_6b_metax' }}
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Test summary
+        if: always()
+        run: |
+          echo "=== Test Summary ==="
+          echo "Status: ${{ job.status }}"
+          echo "Runner: ${{ runner.name }}"
+          echo "Test Case: ${{ inputs.test_case || '0_6b_metax' }}"
+          echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
