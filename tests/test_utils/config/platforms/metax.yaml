@@ -31,7 +31,7 @@ c500:
       # Include patterns: "*" for all, or list specific paths
       include: "*"
       # Exclude paths use pytest --ignore; nodeids use pytest --deselect.
-      exclude: []
+      exclude:
         # MetaX CI: path/hostfile tests are not stable under multi-process torchrun.
         - tests/unit_tests/runner/test_parse_hostfile.py
         - tests/unit_tests/runner/test_path_utils.py::TestResolvePath::test_check_exists_warns_on_missing
