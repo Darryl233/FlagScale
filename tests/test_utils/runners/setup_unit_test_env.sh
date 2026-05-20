@@ -98,7 +98,7 @@ setup_metax_unit_env() {
 
     git clone --depth 1 https://github.com/flagos-ai/TransformerEngine-FL.git
     cd TransformerEngine-FL
-    TE_FL_SKIP_CUDA=1 python -m pip install TransformerEngine-FL --no-build-isolation
+    TE_FL_SKIP_CUDA=1  pip install . --no-build-isolation 
 }
 
 setup_ascend_unit_env() {
