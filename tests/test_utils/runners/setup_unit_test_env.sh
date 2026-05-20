@@ -99,11 +99,17 @@ setup_metax_unit_env() {
     git clone --depth 1 https://github.com/flagos-ai/TransformerEngine-FL.git
     cd TransformerEngine-FL
     TE_FL_SKIP_CUDA=1  pip install . --no-build-isolation
+
+    apt-get update
+    apt-get install -y curl
 }
 
 setup_ascend_unit_env() {
     pip install datasets==4.5.0 omegaconf==2.3.0 diffusers==0.36.0 hydra-core==1.3.2
     echo "Ascend CI image is expected to provide platform runtime dependencies"
+    
+    apt-get update
+    apt-get install -y curl
 }
 
 echo "Preparing unit test environment"
