@@ -129,14 +129,16 @@ EOF
     log_info "Command: $PYTEST_CMD"
 
     # Run unit tests
+    set +e
     eval "$PYTEST_CMD"
     local test_exit=$?
+    set -e
 
     # All ranks have exited — safe to combine fragment files and generate report
     if [ "$USE_COVERAGE" = true ]; then
         log_info "Combining distributed coverage data..."
-        coverage combine --rcfile="$COVERAGERC" "$COVERAGE_DIR" 2>/dev/null || true
-        coverage json --rcfile="$COVERAGERC" -o "$COVERAGE_DIR/coverage.json" 2>/dev/null || true
+        python -m coverage combine --rcfile="$COVERAGERC" "$COVERAGE_DIR"
+        python -m coverage json --rcfile="$COVERAGERC" -o "$COVERAGE_DIR/coverage.json"
     fi
 
     return $test_exit

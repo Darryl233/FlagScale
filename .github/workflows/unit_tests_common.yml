@@ -45,7 +45,8 @@ jobs:
       run:
         shell: bash
     env:
-      PROJECT_ROOT: /tmp/FlagScale
+      PROJECT_ROOT: ${{ github.workspace }}/FlagScale
+      COVERAGE_REPORT_DIR: /tmp/coverage-report
     runs-on: ${{ fromJson(inputs.runs_on) }}
     name: unit-${{ inputs.device }}
     container:
@@ -171,7 +172,7 @@ jobs:
           bash ./tests/test_utils/runners/run_unit_tests.sh \
             --platform '${{ inputs.platform }}' \
             --device '${{ inputs.device }}' \
-            --coverage-dir "$PROJECT_ROOT/coverage-report"
+            --coverage-dir "$COVERAGE_REPORT_DIR"
           exit_code=$?
           set -e
 
@@ -190,7 +191,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-${{ inputs.platform }}-${{ inputs.device }}
-          path: ${{ env.PROJECT_ROOT }}/coverage-report/coverage.json
+          path: ${{ env.COVERAGE_REPORT_DIR }}/coverage.json
           retention-days: 7
 
       - name: Upload coverage report to FlagCICD
@@ -202,6 +203,6 @@ jobs:
         with:
           user_id: '000000000000000000'
           backend_url: 'http://flagcicd-inner.flagos.net:8000/metrics/'
-          report_path: '${{ env.PROJECT_ROOT }}/coverage-report/coverage.json'
+          report_path: '${{ env.COVERAGE_REPORT_DIR }}/coverage.json'
           fail_on_error: 'false'
           runner_set_name: ${{ fromJson(inputs.runs_on)[0] }}
