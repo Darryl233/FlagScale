@@ -54,7 +54,7 @@ activate_python_env() {
 }
 
 install_common_python_deps() {
-    python -m pip install coverage pytest-mock  diffusers==0.36.0 transformers==4.57.6 --quiet --root-user-action=ignore 
+    python -m pip install coverage pytest-mock  diffusers==0.36.0 transformers==4.57.6 --quiet --root-user-action=ignore
 }
 
 setup_cuda_unit_env() {
@@ -90,15 +90,15 @@ setup_cuda_unit_env() {
 }
 
 setup_metax_unit_env() {
-    
+
     git clone https://github.com/flagos-ai/Megatron-LM-FL.git
     cd Megatron-LM-FL
     git checkout d092f8df49f7c0b5b4cae42d036b7e4a26b8fc81
-    pip install . --no-build-isolation 
+    pip install . --no-build-isolation
 
     git clone --depth 1 https://github.com/flagos-ai/TransformerEngine-FL.git
     cd TransformerEngine-FL
-    TE_FL_SKIP_CUDA=1  pip install . --no-build-isolation 
+    TE_FL_SKIP_CUDA=1  pip install . --no-build-isolation
 }
 
 setup_ascend_unit_env() {
