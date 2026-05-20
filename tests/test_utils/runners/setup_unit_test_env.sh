@@ -55,10 +55,6 @@ activate_python_env() {
 
 install_common_python_deps() {
     python -m pip install coverage pytest-mock  diffusers==0.36.0 transformers==4.57.6 --quiet --root-user-action=ignore 
-    git clone https://github.com/flagos-ai/Megatron-LM-FL.git
-    cd Megatron-LM-FL
-    git checkout d092f8df49f7c0b5b4cae42d036b7e4a26b8fc81
-    pip install . --no-build-isolation 
 }
 
 setup_cuda_unit_env() {
@@ -94,30 +90,14 @@ setup_cuda_unit_env() {
 }
 
 setup_metax_unit_env() {
-    if python - <<'PY'
-import importlib.util
-raise SystemExit(0 if importlib.util.find_spec("megatron") else 1)
-PY
-    then
-        echo "Megatron already available for MetaX unit tests"
-    else
-        rm -rf /tmp/Megatron-LM-FL
-        git clone "https://github.com/flagos-ai/Megatron-LM-FL.git" /tmp/Megatron-LM-FL
-        git -C /tmp/Megatron-LM-FL checkout d092f8df49f7c0b5b4cae42d036b7e4a26b8fc81
-        python -m pip install /tmp/Megatron-LM-FL --no-build-isolation --root-user-action=ignore
-    fi
+    
+    git clone https://github.com/flagos-ai/Megatron-LM-FL.git
+    cd Megatron-LM-FL
+    git checkout d092f8df49f7c0b5b4cae42d036b7e4a26b8fc81
+    pip install . --no-build-isolation 
 
-    if python - <<'PY'
-import importlib.util
-raise SystemExit(0 if importlib.util.find_spec("transformer_engine") else 1)
-PY
-    then
-        echo "TransformerEngine already available for MetaX unit tests"
-    else
-        rm -rf /workspace/TransformerEngine-FL
-        git clone --depth 1 https://github.com/flagos-ai/TransformerEngine-FL.git /workspace/TransformerEngine-FL
-        TE_FL_SKIP_CUDA=1 python -m pip install /workspace/TransformerEngine-FL --no-build-isolation
-    fi
+    git clone --depth 1 https://github.com/flagos-ai/TransformerEngine-FL.git
+    TE_FL_SKIP_CUDA=1 python -m pip install /workspace/TransformerEngine-FL --no-build-isolation
 }
 
 setup_ascend_unit_env() {
