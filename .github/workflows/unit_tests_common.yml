@@ -167,7 +167,7 @@ jobs:
           echo "Python version: $(python --version)"
 
           set +e
-          bash ./tests/test_utils/runners/run_unit_tests.sh \
+          PYTHONPATH=$PYTHONPATH:./flagscale/train/ bash ./tests/test_utils/runners/run_unit_tests.sh \
             --platform '${{ inputs.platform }}' \
             --device '${{ inputs.device }}' \
             --coverage-dir "$PROJECT_ROOT/coverage-report"

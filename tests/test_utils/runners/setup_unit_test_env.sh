@@ -54,7 +54,7 @@ activate_python_env() {
 }
 
 install_common_python_deps() {
-    python -m pip install coverage --quiet
+    python -m pip install coverage pytest-mock --quiet --root-user-action=ignore
 }
 
 setup_cuda_unit_env() {
