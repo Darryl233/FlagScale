@@ -102,6 +102,7 @@ setup_metax_unit_env() {
 }
 
 setup_ascend_unit_env() {
+    pip install datasets==4.5.0 omegaconf==2.3.0 diffusers==0.36.0 hydra-core==1.3.2
     echo "Ascend CI image is expected to provide platform runtime dependencies"
 }
 
