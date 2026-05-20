@@ -12,6 +12,8 @@ import torch.nn as nn
 from safetensors.torch import save_file
 from torch.distributed._composable.fsdp import fully_shard
 
+from tests.unit_tests.test_utilities import Utils as TestUtils
+
 from flagscale.models.utils.constants import (
     CHECKPOINTS_DIR,
     LAST_CHECKPOINT_LINK,
@@ -36,7 +38,6 @@ from flagscale.train.utils.train_utils import (
     save_training_step,
     update_last_checkpoint,
 )
-from tests.unit_tests.test_utilities import Utils as TestUtils
 
 
 class SimpleModel(nn.Module):

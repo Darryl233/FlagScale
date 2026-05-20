@@ -27,9 +27,7 @@ def extract_test_patterns(json_str: str) -> tuple[str, str]:
         # Paths are ignored before collection; nodeids are deselected after collection.
         # This allows configs to exclude either whole files/directories or individual tests.
         exclude_args = (
-            " ".join(
-                f"--deselect={e}" if "::" in e else f"--ignore={e}" for e in exclude_list
-            )
+            " ".join(f"--deselect={e}" if "::" in e else f"--ignore={e}" for e in exclude_list)
             if exclude_list
             else ""
         )

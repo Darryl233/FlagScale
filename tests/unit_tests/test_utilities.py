@@ -7,7 +7,6 @@ from torch.distributed import rendezvous
 
 import megatron.core.parallel_state as ps
 
-
 PLATFORM_RUNTIME_MAP = {
     "cuda": {
         "dist_backend": "nccl",
