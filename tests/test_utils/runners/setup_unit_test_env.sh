@@ -54,7 +54,11 @@ activate_python_env() {
 }
 
 install_common_python_deps() {
-    python -m pip install coverage pytest-mock --quiet --root-user-action=ignore
+    python -m pip install coverage pytest-mock  diffusers==0.36.0 transformers==4.57.6 --quiet --root-user-action=ignore 
+    git clone https://github.com/flagos-ai/Megatron-LM-FL.git
+    cd Megatron-LM-FL
+    git checkout d092f8df49f7c0b5b4cae42d036b7e4a26b8fc81
+    pip install . --no-build-isolation 
 }
 
 setup_cuda_unit_env() {
