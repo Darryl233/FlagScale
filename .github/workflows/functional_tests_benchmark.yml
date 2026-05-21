@@ -45,7 +45,7 @@ jobs:
       run:
         shell: bash
     env:
-      PROJECT_ROOT: ${{ github.workspace }}/FlagScale
+      PROJECT_ROOT: /tmp/FlagScale
     runs-on: ${{ fromJson(inputs.runs_on) }}
     strategy:
       fail-fast: false
@@ -307,6 +307,7 @@ jobs:
           repository_name: '${{ github.repository }}'
           commit_id: '${{ github.event.pull_request.head.sha || github.sha }}'
           workflow_id: '${{ github.run_id }}'
+          runner_set_name: ${{ fromJson(inputs.runs_on)[0] }}
           fail_on_error: 'false'
 
       - name: Upload Benchmark Test Logs
