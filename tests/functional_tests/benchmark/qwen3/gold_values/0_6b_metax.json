@@ -2,14 +2,14 @@
     "metax": {
         "c500": {
             "elapsed time per iteration (ms):": {
-                "values": [],
+                "values": [1295.3, 262.0, 267.6, 260.7, 261.6, 262.1, 261.1, 260.0, 258.9, 258.8, 261.7, 261.5, 260.4, 278.1, 275.5, 276.6, 276.6, 275.0, 278.6],
                 "threshold": {
                     "type": "upper_bound",
                     "tolerance": 0.1
                 }
             },
             "throughput per GPU (TFLOP/s/GPU):": {
-                "values": [],
+                "values": [0.7, 3.6, 3.5, 3.6, 3.6, 3.6, 3.6, 3.6, 3.6, 3.6, 3.6, 3.6, 3.6, 3.4, 3.4, 3.4, 3.4, 3.4, 3.4],
                 "threshold": {
                     "type": "lower_bound",
                     "tolerance": 0.1
