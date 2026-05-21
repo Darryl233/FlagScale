@@ -24,7 +24,8 @@ c500:
       train:
         qwen3: ["0_6b_metax"]
       hetero_train: {}
-      benchmark: {}
+      benchmark:
+        qwen3: ["0_6b_metax"]
       inference: {}
       serve: {}
     unit:
