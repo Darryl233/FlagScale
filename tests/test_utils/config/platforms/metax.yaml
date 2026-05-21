@@ -1,7 +1,7 @@
-# MetaX C500 Platform Configuration
-# Flexible test selection mechanism for MetaX C500 GPU (MACA) environments
+# MetaX C550 Platform Configuration
+# Flexible test selection mechanism for MetaX C550 GPU (MACA) environments
 #
-# MetaX C500 specs: 2x C500 GPUs, 65536 MiB each, MACA 3.3.0
+# MetaX C550 specs: 2x C550 GPUs, 65536 MiB each, MACA 3.3.0
 #
 # Users can modify the following:
 # - functional: Add/remove test case names in the support lists
@@ -13,11 +13,11 @@
 
 # Define device types available for this platform
 device_types:
-  - c500
+  - c550
 
 # Device-specific test configurations
-c500:
-  name: "c500"
+c550:
+  name: "c550"
   tests:
     functional:
       # Add or remove test cases per model
