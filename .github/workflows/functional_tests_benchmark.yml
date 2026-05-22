@@ -327,6 +327,33 @@ jobs:
           TASK='${{ matrix.test_config.task }}'
           MODEL='${{ matrix.test_config.model }}'
           CASE='${{ matrix.test_config.case }}'
+          PKG_MGR='${{ inputs.pkg_mgr }}'
+          ENV_NAME='${{ inputs.env_name }}'
+          ENV_PATH='${{ inputs.env_path }}'
+
+          source ./tools/install/utils/pyenv_utils.sh
+          case "$PKG_MGR" in
+            conda)
+              if [ -n "$ENV_NAME" ]; then
+                activate_conda "$ENV_NAME" "$ENV_PATH" || { echo "Conda activation failed"; exit 1; }
+              fi
+              ;;
+            uv)
+              if [ -n "$ENV_PATH" ] && [ -d "$ENV_PATH" ]; then
+                activate_uv_env "$ENV_PATH" || { echo "UV activation failed"; exit 1; }
+              fi
+              ;;
+            pip)
+              echo "Using system Python with pip"
+              ;;
+            *)
+              echo "Unsupported package manager: $PKG_MGR"
+              exit 1
+              ;;
+          esac
+
+          echo "Python location: $(which python)"
+          echo "Python version: $(python --version)"
 
           LOG_FILE="tests/functional_tests/${TASK}/${MODEL}/test_results/${CASE}/logs/host_0_localhost.output"
           GOLD_FILE="tests/functional_tests/${TASK}/${MODEL}/gold_values/${CASE}.json"
