@@ -67,7 +67,6 @@ jobs:
     name: CUDA tests
     needs: check_docker_changes
     if: >-
-      always() &&
       (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'cuda') &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.check_docker_changes.outputs.has_docker_changes != 'true')
     uses: ./.github/workflows/all_tests_common.yml
