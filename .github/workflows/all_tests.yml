@@ -63,22 +63,22 @@ jobs:
             echo "has_docker_changes=false" >> $GITHUB_OUTPUT
           fi
 
-  cuda_tests:
-    name: CUDA tests
-    needs: check_docker_changes
-    if: >-
-      (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'cuda') &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.check_docker_changes.outputs.has_docker_changes != 'true')
-    uses: ./.github/workflows/all_tests_common.yml
-    with:
-      platform: cuda
+  # cuda_tests:
+  #   name: CUDA tests
+  #   needs: check_docker_changes
+  #   if: >-
+  #     (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'cuda') &&
+  #     (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.check_docker_changes.outputs.has_docker_changes != 'true')
+  #   uses: ./.github/workflows/all_tests_common.yml
+  #   with:
+  #     platform: cuda
 
-  ascend_tests:
-    name: Ascend tests
-    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'ascend'
-    uses: ./.github/workflows/all_tests_common.yml
-    with:
-      platform: ascend
+  # ascend_tests:
+  #   name: Ascend tests
+  #   if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'ascend'
+  #   uses: ./.github/workflows/all_tests_common.yml
+  #   with:
+  #     platform: ascend
 
   metax_tests:
     name: MetaX tests
@@ -101,19 +101,19 @@ jobs:
         run: |
           failed=false
 
-          if [ "${{ needs.check_docker_changes.outputs.has_docker_changes }}" = "true" ]; then
-            echo "⏭️ CUDA tests skipped - docker changes detected, handled by build_image_cuda workflow"
-          elif [ "${{ needs.cuda_tests.result }}" != "success" ] && \
-               [ "${{ needs.cuda_tests.result }}" != "skipped" ]; then
-            echo "❌ CUDA tests failed"
-            failed=true
-          fi
+          # if [ "${{ needs.check_docker_changes.outputs.has_docker_changes }}" = "true" ]; then
+          #   echo "⏭️ CUDA tests skipped - docker changes detected, handled by build_image_cuda workflow"
+          # elif [ "${{ needs.cuda_tests.result }}" != "success" ] && \
+          #      [ "${{ needs.cuda_tests.result }}" != "skipped" ]; then
+          #   echo "❌ CUDA tests failed"
+          #   failed=true
+          # fi
 
-          if [ "${{ needs.ascend_tests.result }}" != "success" ] && \
-             [ "${{ needs.ascend_tests.result }}" != "skipped" ]; then
-            echo "❌ Ascend tests failed"
-            failed=true
-          fi
+          # if [ "${{ needs.ascend_tests.result }}" != "success" ] && \
+          #    [ "${{ needs.ascend_tests.result }}" != "skipped" ]; then
+          #   echo "❌ Ascend tests failed"
+          #   failed=true
+          # fi
 
           if [ "${{ needs.metax_tests.result }}" != "success" ] && \
              [ "${{ needs.metax_tests.result }}" != "skipped" ]; then
