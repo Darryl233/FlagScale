@@ -73,7 +73,7 @@ jobs:
     with:
       platform: cuda
 
-  # Disable util the new deivces ready
+  # Disable util the new devices ready
   # ascend_tests:
   #   name: Ascend tests
   #   if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'ascend'
