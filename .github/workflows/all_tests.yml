@@ -63,16 +63,17 @@ jobs:
             echo "has_docker_changes=false" >> $GITHUB_OUTPUT
           fi
 
-  # cuda_tests:
-  #   name: CUDA tests
-  #   needs: check_docker_changes
-  #   if: >-
-  #     (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'cuda') &&
-  #     (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.check_docker_changes.outputs.has_docker_changes != 'true')
-  #   uses: ./.github/workflows/all_tests_common.yml
-  #   with:
-  #     platform: cuda
+  cuda_tests:
+    name: CUDA tests
+    needs: check_docker_changes
+    if: >-
+      (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'cuda') &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || needs.check_docker_changes.outputs.has_docker_changes != 'true')
+    uses: ./.github/workflows/all_tests_common.yml
+    with:
+      platform: cuda
 
+  # Disable util the new deivces ready
   # ascend_tests:
   #   name: Ascend tests
   #   if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'ascend'
