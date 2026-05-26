@@ -126,11 +126,13 @@ jobs:
           set -euo pipefail
           cd $PROJECT_ROOT
 
-          bash ./tests/test_utils/runners/setup_unit_test_env.sh \
+          bash ./tests/test_utils/runners/setup_training_test_env.sh \
             --platform '${{ inputs.platform }}' \
             --pkg-mgr '${{ inputs.pkg_mgr }}' \
             --env-name '${{ inputs.env_name }}' \
-            --env-path '${{ inputs.env_path }}'
+            --env-path '${{ inputs.env_path }}' \
+            --install-common-deps \
+            --copy-data
         timeout-minutes: 30
 
       - name: Run unit tests

@@ -126,7 +126,6 @@ jobs:
           ENV_PATH='${{ inputs.env_path }}'
 
           echo "Installing FlagScale CLI"
-          echo "Installing dependencies for training"
           echo "Package Manager: $PKG_MGR"
           echo "Environment Name: $ENV_NAME"
           echo "Environment Path: $ENV_PATH"

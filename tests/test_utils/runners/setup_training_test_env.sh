@@ -1,5 +1,5 @@
 #!/bin/bash
-# Prepare the Python/runtime environment for unit tests.
+# Prepare the Python/runtime environment for training tests.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,6 +9,11 @@ PLATFORM=""
 PKG_MGR="uv"
 ENV_NAME=""
 ENV_PATH="/opt/venv"
+INSTALL_COMMON_DEPS=false
+INSTALL_CLI=false
+INSTALL_PLATFORM_DEPS=true
+COPY_DATA=false
+MEGATRON_LM_FL_REF="77a74339605b0bd03ace957293b8e12a823b2999"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -16,6 +21,11 @@ while [[ $# -gt 0 ]]; do
         --pkg-mgr) PKG_MGR="$2"; shift 2 ;;
         --env-name) ENV_NAME="$2"; shift 2 ;;
         --env-path) ENV_PATH="$2"; shift 2 ;;
+        --install-common-deps) INSTALL_COMMON_DEPS=true; shift ;;
+        --install-cli) INSTALL_CLI=true; shift ;;
+        --skip-platform-deps) INSTALL_PLATFORM_DEPS=false; shift ;;
+        --copy-data) COPY_DATA=true; shift ;;
+        --megatron-lm-fl-ref) MEGATRON_LM_FL_REF="$2"; shift 2 ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
 done
@@ -54,10 +64,22 @@ activate_python_env() {
 }
 
 install_common_python_deps() {
-    python -m pip install coverage pytest-mock  diffusers==0.36.0 transformers==4.57.6 --quiet --root-user-action=ignore
+    python -m pip install coverage pytest-mock diffusers==0.36.0 transformers==4.57.6 --quiet --root-user-action=ignore
 }
 
-setup_cuda_unit_env() {
+install_flagscale_cli() {
+    python -m pip install . --no-build-isolation --root-user-action=ignore || {
+        echo "FlagScale CLI install failed"
+        exit 1
+    }
+    command -v flagscale || {
+        echo "FlagScale CLI not found in PATH"
+        exit 1
+    }
+    echo "FlagScale CLI installed successfully: $(flagscale --version 2>/dev/null || echo 'version unknown')"
+}
+
+setup_cuda_training_env() {
     local install_dir=""
     if [ "$PKG_MGR" = "conda" ] && [ -n "$ENV_PATH" ]; then
         install_dir=$(dirname "$ENV_PATH")
@@ -89,51 +111,70 @@ setup_cuda_unit_env() {
         datasets==4.5.0
 }
 
-setup_metax_unit_env() {
+setup_metax_training_env() {
+    local megatron_dir="/tmp/Megatron-LM-FL"
+    local te_dir="/tmp/TransformerEngine-FL"
 
-    git clone https://github.com/flagos-ai/Megatron-LM-FL.git
-    cd Megatron-LM-FL
-    git checkout d092f8df49f7c0b5b4cae42d036b7e4a26b8fc81
-    pip install . --no-build-isolation
+    git clone https://github.com/flagos-ai/Megatron-LM-FL.git "$megatron_dir"
+    git -C "$megatron_dir" checkout "$MEGATRON_LM_FL_REF"
+    python -m pip install "$megatron_dir" --no-build-isolation --root-user-action=ignore
 
-    git clone --depth 1 https://github.com/flagos-ai/TransformerEngine-FL.git
-    cd TransformerEngine-FL
-    TE_FL_SKIP_CUDA=1  pip install . --no-build-isolation
+    git clone --depth 1 https://github.com/flagos-ai/TransformerEngine-FL.git "$te_dir"
+    TE_FL_SKIP_CUDA=1 python -m pip install "$te_dir" --no-build-isolation --root-user-action=ignore
 
     apt-get update
     apt-get install -y curl
 }
 
-setup_ascend_unit_env() {
-    pip install datasets==4.5.0 omegaconf==2.3.0 diffusers==0.36.0 hydra-core==1.3.2
+setup_ascend_training_env() {
+    python -m pip install datasets==4.5.0 omegaconf==2.3.0 diffusers==0.36.0 hydra-core==1.3.2
     echo "Ascend CI image is expected to provide platform runtime dependencies"
 
     apt-get update
     apt-get install -y curl
 }
 
-echo "Preparing unit test environment"
+copy_training_data() {
+    mkdir -p /opt/data
+    cp -r /home/gitlab-runner/data/Megatron-LM/* /opt/data/ 2>/dev/null || true
+    cp -r /home/gitlab-runner/tokenizers/Megatron-LM/* /opt/data/ 2>/dev/null || true
+}
+
+echo "Preparing training test environment"
 echo "Platform: $PLATFORM"
 echo "Package Manager: $PKG_MGR"
 echo "Environment Name: $ENV_NAME"
 echo "Environment Path: $ENV_PATH"
+echo "Install common deps: $INSTALL_COMMON_DEPS"
+echo "Install FlagScale CLI: $INSTALL_CLI"
+echo "Install platform deps: $INSTALL_PLATFORM_DEPS"
 
 activate_python_env
 
 echo "Python location: $(command -v python)"
 echo "Python version: $(python --version)"
 
-install_common_python_deps
+if [ "$INSTALL_COMMON_DEPS" = true ]; then
+    install_common_python_deps
+fi
 
-case "$PLATFORM" in
-    cuda) setup_cuda_unit_env ;;
-    ascend) setup_ascend_unit_env ;;
-    metax) setup_metax_unit_env ;;
-    *) echo "No platform-specific unit setup for $PLATFORM" ;;
-esac
+if [ "$INSTALL_CLI" = true ]; then
+    install_flagscale_cli
+fi
 
-mkdir -p /opt/data
-cp -r /home/gitlab-runner/data/Megatron-LM/* /opt/data/ 2>/dev/null || true
-cp -r /home/gitlab-runner/tokenizers/Megatron-LM/* /opt/data/ 2>/dev/null || true
+if [ "$INSTALL_PLATFORM_DEPS" = true ]; then
+    case "$PLATFORM" in
+        cuda) setup_cuda_training_env ;;
+        ascend) setup_ascend_training_env ;;
+        metax) setup_metax_training_env ;;
+        *) echo "No platform-specific training setup for $PLATFORM" ;;
+    esac
+else
+    echo "Skipping platform-specific training dependencies"
+fi
 
-echo "Unit test environment ready"
+if [ "$COPY_DATA" = true ]; then
+    copy_training_data
+fi
+
+echo "Training test environment ready"
