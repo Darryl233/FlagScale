@@ -232,7 +232,7 @@ jobs:
 
           git clone \
             "https://github.com/flagos-ai/Megatron-LM-FL.git" /tmp/Megatron-LM-FL
-          git -C /tmp/Megatron-LM-FL checkout d092f8df49f7c0b5b4cae42d036b7e4a26b8fc81
+          git -C /tmp/Megatron-LM-FL checkout 77a74339605b0bd03ace957293b8e12a823b2999
 
           echo "Installing Megatron-LM-FL via pip..."
           pip install /tmp/Megatron-LM-FL --no-build-isolation --root-user-action=ignore \
