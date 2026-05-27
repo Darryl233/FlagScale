@@ -92,7 +92,7 @@ jobs:
     name: Verify all platform tests
     needs:
       - check_docker_changes
-      # - cuda_tests
+      - cuda_tests
       # - ascend_tests
       - metax_tests
     runs-on: ubuntu-latest
