@@ -89,7 +89,7 @@ jobs:
       platform: metax
 
   all_tests:
-    name: Verify all platform tests
+    name: all_tests
     needs:
       - check_docker_changes
       - cuda_tests
