@@ -14,7 +14,7 @@ ci_inference_image: harbor.baai.ac.cn/flagscale/megatron-lm-with-te:202603231839
 runner_labels: ["mx-flagscale-test-v2"]
 
 # Container volumes (hardware-specific paths)
-# container_volumes:
+container_volumes:
 #   - /mnt/airs-business/cicd/baai_datasets:/home/gitlab-runner/data
 #   - /mnt/airs-business/cicd/baai_tokenizers:/home/gitlab-runner/tokenizers
 
