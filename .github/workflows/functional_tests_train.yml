@@ -55,7 +55,6 @@ jobs:
       image: ${{ inputs.image }}
       ports:
         - 80
-      volumes: ${{ fromJson(inputs.container_volumes) }}
       options: ${{ inputs.container_options }}
 
     steps:
