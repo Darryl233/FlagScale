@@ -1,4 +1,19 @@
 #!/bin/bash
+
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Platform configuration loading script
 # Extracts platform configuration and groups tests by task
 # Usage: source load_platform_config.sh && load_platform_config <platform_name>
@@ -24,6 +39,8 @@ load_platform_config() {
     RUNNER_LABELS=$(/usr/local/bin/yq -o=json -I=0 '.runner_labels' "$CONFIG_FILE")
     VOLUMES=$(/usr/local/bin/yq -o=json -I=0 '.container_volumes' "$CONFIG_FILE")
     CONTAINER_OPTIONS=$(/usr/local/bin/yq -r '.container_options' "$CONFIG_FILE")
+    INFERENCE_TIMEOUT_MINUTES=$(/usr/local/bin/yq -r '.timeouts.inference_minutes // 15' "$CONFIG_FILE")
+    SERVE_READY_TIMEOUT_SECONDS=$(/usr/local/bin/yq -r '.timeouts.serve_ready_seconds // 180' "$CONFIG_FILE")
 
     # Extract package manager configuration
     PKG_MGR=$(/usr/local/bin/yq -r '.pkg_mgr // "uv"' "$CONFIG_FILE")
@@ -100,6 +117,8 @@ load_platform_config() {
     echo "ci_train_image=$CI_TRAIN_IMAGE" >> $GITHUB_OUTPUT
     echo "ci_inference_image=$CI_INFERENCE_IMAGE" >> $GITHUB_OUTPUT
     echo "container_options=$CONTAINER_OPTIONS" >> $GITHUB_OUTPUT
+    echo "inference_timeout_minutes=$INFERENCE_TIMEOUT_MINUTES" >> $GITHUB_OUTPUT
+    echo "serve_ready_timeout_seconds=$SERVE_READY_TIMEOUT_SECONDS" >> $GITHUB_OUTPUT
 
     { echo 'runs_on<<EOFRUNSON'; echo "$RUNNER_LABELS"; echo 'EOFRUNSON'; } >> $GITHUB_OUTPUT
     { echo 'container_volumes<<EOFVOLUMES'; echo "$VOLUMES"; echo 'EOFVOLUMES'; } >> $GITHUB_OUTPUT

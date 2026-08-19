@@ -1,3 +1,17 @@
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 name: Common All Tests
 
 on:
@@ -48,6 +62,8 @@ jobs:
       serve_test_matrix: ${{ steps.config.outputs.serve_test_matrix }}
       rl_test_matrix: ${{ steps.config.outputs.rl_test_matrix }}
       benchmark_test_matrix: ${{ steps.config.outputs.benchmark_test_matrix }}
+      inference_timeout_minutes: ${{ steps.config.outputs.inference_timeout_minutes }}
+      serve_ready_timeout_seconds: ${{ steps.config.outputs.serve_ready_timeout_seconds }}
       pkg_mgr: ${{ steps.config.outputs.pkg_mgr }}
       env_path: ${{ steps.config.outputs.env_path }}
       env_name_train: ${{ steps.config.outputs.env_name_train }}
@@ -244,6 +260,7 @@ jobs:
       pkg_mgr: ${{ needs.checkout_and_config.outputs.pkg_mgr }}
       env_name: ${{ needs.checkout_and_config.outputs.env_name_inference }}
       env_path: ${{ needs.checkout_and_config.outputs.env_path }}
+      timeout_minutes: ${{ fromJSON(needs.checkout_and_config.outputs.inference_timeout_minutes) }}
 
   functional_tests_serve:
     needs:
@@ -262,6 +279,7 @@ jobs:
       pkg_mgr: ${{ needs.checkout_and_config.outputs.pkg_mgr }}
       env_name: ${{ needs.checkout_and_config.outputs.env_name_serve }}
       env_path: ${{ needs.checkout_and_config.outputs.env_path }}
+      ready_timeout_seconds: ${{ fromJSON(needs.checkout_and_config.outputs.serve_ready_timeout_seconds) }}
 
   # NOTE: rl functional tests are temporarily disabled
   # functional_tests_rl:

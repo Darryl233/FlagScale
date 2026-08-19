@@ -1,4 +1,19 @@
 #!/bin/bash
+
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Shared Utility Functions for FlagScale Test Runners
 
 # Logging
@@ -101,6 +116,14 @@ _gpu_fetch_ascend() {
     mapfile -t mem_total < <(echo "$info" | awk -v idx=2 "$pci_awk")
 }
 
+# Fetch mem_used[] and mem_total[] arrays for MThreads MUSA.
+_gpu_fetch_musa() {
+    local mem_output
+    mem_output=$(mthreads-gmi 2>/dev/null | grep -oE '[0-9]+MiB\([0-9]+MiB\)' || true)
+    mapfile -t mem_used < <(echo "$mem_output" | sed -E 's/^([0-9]+)MiB.*/\1/')
+    mapfile -t mem_total < <(echo "$mem_output" | sed -E 's/^[0-9]+MiB\(([0-9]+)MiB\)/\1/')
+}
+
 # Common polling loop; args: <gpu_count> <fetch_fn>
 _gpu_poll_loop() {
     local gpu_count=$1 fetch_fn=$2
@@ -132,6 +155,9 @@ wait_for_gpu() {
     elif command -v npu-smi &>/dev/null; then
         gpu_count=$(npu-smi info -l 2>/dev/null | awk '/Total Count/{print $NF}')
         fetch_fn=_gpu_fetch_ascend
+    elif command -v mthreads-gmi &>/dev/null; then
+        gpu_count=$(mthreads-gmi 2>/dev/null | grep -c 'MTT S5000' || true)
+        fetch_fn=_gpu_fetch_musa
     else
         return 0
     fi
@@ -144,6 +170,7 @@ default_dist_backend() {
     case "$platform" in
         ascend) echo "hccl" ;;
         metax) echo "${FLAGSCALE_TEST_METAX_BACKEND:-nccl}" ;;
+        musa) echo "mccl" ;;
         *) echo "nccl" ;;
     esac
 }
@@ -152,6 +179,7 @@ default_torch_device_type() {
     local platform="${1:-}"
     case "$platform" in
         ascend) echo "npu" ;;
+        musa) echo "musa" ;;
         *) echo "cuda" ;;
     esac
 }
@@ -183,6 +211,19 @@ elif hasattr(torch, "cuda") and hasattr(torch.cuda, "device_count"):
     print(torch.cuda.device_count())
 else:
     print(1)
+PY
+            } | awk '/^[0-9]+$/ { value=$1 } END { print value ? value : 1 }'
+            ;;
+        musa)
+            {
+                python - <<'PY' 2>/dev/null || true
+import torch
+try:
+    import torch_musa  # noqa: F401
+except Exception:
+    pass
+device_count = getattr(getattr(torch, "musa", None), "device_count", None)
+print(device_count() if callable(device_count) else 1)
 PY
             } | awk '/^[0-9]+$/ { value=$1 } END { print value ? value : 1 }'
             ;;

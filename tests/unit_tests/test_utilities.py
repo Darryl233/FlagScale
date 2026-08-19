@@ -1,9 +1,21 @@
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 from datetime import timedelta
 
 import torch
-from torch._C._distributed_c10d import PrefixStore
-from torch.distributed import rendezvous
 
 import megatron.core.parallel_state as ps
 
@@ -25,6 +37,12 @@ PLATFORM_RUNTIME_MAP = {
         "torch_device_type": "cuda",
         "torch_accelerator_attr": "cuda",
         "optional_runtime_module": None,
+    },
+    "musa": {
+        "dist_backend": "mccl",
+        "torch_device_type": "musa",
+        "torch_accelerator_attr": "musa",
+        "optional_runtime_module": "torch_musa",
     },
 }
 
@@ -52,7 +70,6 @@ class Utils:
     world_size = int(os.environ["WORLD_SIZE"])
     rank = int(os.environ["LOCAL_RANK"])
     inited = False
-    store = None
 
     @staticmethod
     def platform():
@@ -114,6 +131,14 @@ class Utils:
         return torch.device(f"{Utils.torch_device_type()}:{index}")
 
     @staticmethod
+    def distributed_barrier():
+        if Utils.has_accelerator():
+            device_index = Utils.rank % Utils.accelerator_device_count()
+            torch.distributed.barrier(device_ids=[device_index])
+        else:
+            torch.distributed.barrier()
+
+    @staticmethod
     def initialize_distributed():
         os.environ.pop("NVTE_FLASH_ATTN", None)
         os.environ.pop("NVTE_FUSED_ATTN", None)
@@ -128,29 +153,17 @@ class Utils:
             set_device = getattr(accelerator, "set_device", None)
             if callable(set_device):
                 set_device(Utils.rank % Utils.accelerator_device_count())
-            init_method = "tcp://"
-            master_ip = os.getenv("MASTER_ADDR", "localhost")
-            master_port = os.getenv("MASTER_PORT", "6000")
-            init_method += master_ip + ":" + master_port
-            rendezvous_iterator = rendezvous(
-                init_method, Utils.rank, Utils.world_size, timeout=timedelta(minutes=1)
-            )
-            store, rank, world_size = next(rendezvous_iterator)
-            store.set_timeout(timedelta(minutes=1))
-
-            # Use a PrefixStore to avoid accidental overrides of keys used by
-            # different systems (e.g. RPC) in case the store is multi-tenant.
-            store = PrefixStore("default_pg", store)
-            Utils.store = store
-
+            os.environ.setdefault("MASTER_ADDR", "localhost")
+            os.environ.setdefault("MASTER_PORT", "6000")
             torch.distributed.init_process_group(
                 backend=Utils.dist_backend(),
+                init_method="env://",
                 world_size=Utils.world_size,
                 rank=Utils.rank,
-                store=store,
+                timeout=timedelta(minutes=5),
             )
 
-            torch.distributed.barrier()
+            Utils.distributed_barrier()
         Utils.inited = True
 
     @staticmethod
@@ -176,8 +189,11 @@ class Utils:
         os.environ.pop("NVTE_UNFUSED_ATTN", None)
         if not Utils.inited:
             return
-        torch.distributed.barrier()
+        if torch.distributed.is_initialized():
+            Utils.distributed_barrier()
         ps.destroy_model_parallel()
+        # Keep torchrun's default group alive across tests. Per-test teardown
+        # can race accelerator subgroups that are still completing collectives.
         Utils.inited = False
 
     @staticmethod

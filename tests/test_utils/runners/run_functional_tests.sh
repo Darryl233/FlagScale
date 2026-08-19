@@ -1,10 +1,31 @@
 #!/bin/bash
+
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Functional Test Runner
 set -eo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 source "$SCRIPT_DIR/utils.sh"
+
+# Ensure the repo root is on PYTHONPATH so training subprocesses can import
+# top-level packages that are not shipped by `pip install .` (e.g. `tools`,
+# used by train_qwen*_vl.py). The runner appends the pre-set PYTHONPATH when
+# generating the launch script, so this propagates to the torchrun workers.
+export PYTHONPATH="$PROJECT_ROOT:${PYTHONPATH:-}"
 
 # Defaults
 PLATFORM="default"
@@ -149,7 +170,7 @@ run_test() {
             serve_port=$(grep -oP 'port:\s*\K[0-9]+' "$config_file" | head -1)
 
             local max_wait=600   # ascend: 10 min
-            [ "$PLATFORM" != "ascend" ] && max_wait=180   # others: 1 min
+            [ "$PLATFORM" != "ascend" ] && max_wait="${FS_SERVE_READY_TIMEOUT:-180}"
             local interval=10
             local elapsed=0
             local ready=0
@@ -183,12 +204,22 @@ run_test() {
 
             if [ $ready -eq 0 ]; then
                 log_error "Service did not become ready within ${max_wait}s on port $serve_port"
+                local serve_log
+                for serve_log in "$exp_dir"/serve_logs/host*.output; do
+                    [ -f "$serve_log" ] || continue
+                    log_error "Serve output: $serve_log"
+                    tail -n 200 "$serve_log" || true
+                done
+                flagscale serve "$model" --config "$config_file" --stop || true
                 return 1
             fi
         fi
 
         if ! "${validator_cmd[@]}"; then
             log_error "Validation failed for $task/$model/$config"
+            if [ "$task" = "serve" ]; then
+                flagscale serve "$model" --config "$config_file" --stop || true
+            fi
             return 1
         fi
 
