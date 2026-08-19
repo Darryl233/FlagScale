@@ -234,6 +234,10 @@ def get_batch(
     videos = broadcast_data(["videos"], data, torch.float32)["videos"]
     image_thw_grids = broadcast_data(["image_thw_grids"], data, torch.long)["image_thw_grids"]
 
+    # args = get_args()
+    # if data_text.shape[-1] == args.max_padding_length and get_pipeline_model_parallel_rank() == 0:
+    #     cur_platform.empty_cache()
+
     video_thw_grids = broadcast_data(["video_thw_grids"], data, torch.long)["video_thw_grids"]
     second_per_grid_ts = broadcast_data(['second_per_grid_ts'], data, torch.float32)['second_per_grid_ts']
     image_input_mask = broadcast_data(["image_input_mask"], data, torch.bool)["image_input_mask"]
