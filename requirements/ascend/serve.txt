@@ -1,12 +1,22 @@
-# Ascend serve-specific dependencies
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
--r ./base.txt
+# The immutable inference image owns the complete Python, vLLM, FlagTree and
+# Triton dependency closure. Installing FlagTree over that image would replace
+# files in the shared triton namespace and invalidate the tested compiler stack.
 
-# FlagTree for Ascend (extra index so PyPI remains available for build deps)
-# [--extra-index-url https://resource.flagos.net/repository/flagos-pypi-hosted/simple]
+# Keep the ascend-serve packaging extra explicit. The image installer validates
+# this base-owned package instead of reinstalling it.
+# [--no-deps]
 flagtree==0.4.0+ascend3.2
-
-# [--no-build-isolation]
-flag-gems @ git+https://github.com/flagos-ai/FlagGems.git@v5.0.1.rc.0
-# [--extra-index-url https://resource.flagos.net/repository/flagos-pypi-hosted/simple]
-vllm-plugin-fl==0.1.0+vllm0.13.0

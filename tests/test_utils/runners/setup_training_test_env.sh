@@ -1,4 +1,19 @@
 #!/bin/bash
+
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Prepare the Python/runtime environment for training tests.
 set -euo pipefail
 
@@ -107,29 +122,73 @@ setup_cuda_training_env() {
         websocket==0.2.1 \
         websockets==15.0.1 \
         msgpack==1.1.0 \
-        datasets==4.5.0
+        datasets==4.5.0 \
+        https://baai-flagscale.ks3-cn-beijing.ksyuncs.com/whl/fast_hadamard_transform-1.1.0%2Bcu12torch2.9cxx11abiTRUE-cp312-cp312-linux_x86_64.whl
 }
 
 setup_metax_training_env() {
-    local megatron_dir="/tmp/Megatron-LM-FL"
-    local te_dir="/tmp/TransformerEngine-FL"
+    if python -c '
+import transformer_engine
+from megatron.core.models.gpt import GPTModel
+' >/dev/null 2>&1; then
+        echo "MetaX training stack is preinstalled; skipping platform dependency installation"
+        return 0
+    fi
 
-    git clone https://github.com/flagos-ai/Megatron-LM-FL.git "$megatron_dir"
-    python -m pip install "$megatron_dir" --no-build-isolation --root-user-action=ignore
-
-    git clone --depth 1 https://github.com/flagos-ai/TransformerEngine-FL.git "$te_dir"
-    TE_FL_SKIP_CUDA=1 python -m pip install "$te_dir" --no-build-isolation --root-user-action=ignore
-
-    apt-get update
-    apt-get install -y curl
+    echo "MetaX training stack is missing from the configured CI image" >&2
+    return 1
 }
 
 setup_ascend_training_env() {
-    python -m pip install datasets==4.5.0 omegaconf==2.3.0 diffusers==0.36.0 hydra-core==1.3.2
-    echo "Ascend CI image is expected to provide platform runtime dependencies"
+    if TE_FL_SKIP_CUDA=1 python -c '
+from megatron.core.extensions.transformer_engine import HAVE_TE
+from megatron.core.extensions.transformer_engine_spec_provider import TESpecProvider
+from megatron.core.models.gpt import GPTModel
+from transformer_engine.pytorch import DotProductAttention, LayerNormLinear
 
-    apt-get update
-    apt-get install -y curl
+assert HAVE_TE
+assert TESpecProvider is not None
+' >/dev/null 2>&1; then
+        echo "Ascend training stack is preinstalled; skipping platform dependency installation"
+        return 0
+    fi
+
+    echo "Ascend training stack is missing from the configured CI image" >&2
+    return 1
+}
+
+setup_musa_training_env() {
+    if ! FS_PLATFORM=musa MG_FL_PREFER=musa \
+        python -c 'import megatron.core; import torch_musa' >/dev/null 2>&1; then
+        ./tools/install/install.sh \
+            --platform musa \
+            --task train \
+            --pkg-mgr "$PKG_MGR" \
+            --no-system --no-dev --no-base --no-task \
+            --src-deps megatron-lm \
+            --retry-count 3
+    fi
+
+    local required_files=(
+        /home/gitlab-runner/data/pile_wikipedia_demo/pile_wikipedia_demo.bin
+        /home/gitlab-runner/data/pile_wikipedia_demo/pile_wikipedia_demo.idx
+        /home/gitlab-runner/tokenizers/qwentokenizer/qwen.tiktoken
+        /home/gitlab-runner/tokenizers/qwentokenizer/tokenizer_config.json
+    )
+    local required_file
+    for required_file in "${required_files[@]}"; do
+        if [ ! -r "$required_file" ]; then
+            echo "Required MUSA training asset is missing or unreadable: $required_file" >&2
+            exit 1
+        fi
+    done
+
+    python -c '
+import torch
+import torch_musa
+assert torch.musa.is_available()
+print(f"MUSA training environment ready on {torch.musa.device_count()} devices")
+'
 }
 
 copy_training_data() {
@@ -165,6 +224,7 @@ if [ "$INSTALL_PLATFORM_DEPS" = true ]; then
         cuda) setup_cuda_training_env ;;
         ascend) setup_ascend_training_env ;;
         metax) setup_metax_training_env ;;
+        musa) setup_musa_training_env ;;
         *) echo "No platform-specific training setup for $PLATFORM" ;;
     esac
 else

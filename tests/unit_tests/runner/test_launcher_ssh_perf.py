@@ -1,3 +1,17 @@
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from omegaconf import OmegaConf
 
 from flagscale.runner.launcher.launcher_ssh import _get_runner_cmd_train
@@ -16,6 +30,7 @@ def test_get_runner_cmd_train_strips_perf_monitor_runner_keys():
                     "perf_log_interval": 5,
                     "perf_log_dir": "/tmp/perf_monitor",
                     "perf_console_output": True,
+                    "heartbeat": {"enabled": True},
                 }
             },
             "train": {
@@ -35,5 +50,6 @@ def test_get_runner_cmd_train_strips_perf_monitor_runner_keys():
     assert "--perf_log_interval" not in cmd
     assert "--perf_log_dir" not in cmd
     assert "--perf_console_output" not in cmd
+    assert "--heartbeat" not in cmd
     assert "--log_dir" in cmd
     assert "--rdzv_endpoint" in cmd

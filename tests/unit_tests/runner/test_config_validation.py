@@ -1,3 +1,17 @@
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Tests for config error wrapping in flagscale/run.py and flagscale/cli.py.
 
 Verifies that OmegaConf errors are caught and re-raised with detailed context
@@ -13,6 +27,7 @@ from omegaconf.errors import (
     InterpolationResolutionError,
     MissingMandatoryValue,
 )
+from typer import Exit as TyperExit
 
 # ---------------------------------------------------------------------------
 # Tests for _main() error wrapping in run.py
@@ -79,11 +94,9 @@ class TestCliErrorHandling:
 
     def test_handle_config_error_exits_with_context(self, capsys):
         """_handle_config_error should print config file, error, hint and exit."""
-        from click.exceptions import Exit
-
         from flagscale.cli import _handle_config_error
 
-        with pytest.raises(Exit) as exc_info:
+        with pytest.raises(TyperExit) as exc_info:
             _handle_config_error(
                 ValueError("test error"),
                 "/path/to/config",
@@ -98,11 +111,9 @@ class TestCliErrorHandling:
 
     def test_run_task_catches_exception(self):
         """run_task should catch exceptions from run_main and format them."""
-        from click.exceptions import Exit
-
         from flagscale.cli import run_task
 
         with patch("flagscale.run.main", side_effect=RuntimeError("bad config")):
-            with pytest.raises(Exit) as exc_info:
+            with pytest.raises(TyperExit) as exc_info:
                 run_task("/nonexistent/path", "bad_config", "run")
             assert exc_info.value.exit_code == 1

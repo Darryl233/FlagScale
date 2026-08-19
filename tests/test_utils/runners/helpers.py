@@ -1,4 +1,19 @@
 #!/usr/bin/env python3
+
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Helper functions for FlagScale test runners.
 Provides utilities for parsing test configurations and formatting output.
@@ -8,7 +23,7 @@ import json
 import sys
 
 
-def extract_test_patterns(json_str: str) -> tuple[str, str]:
+def extract_test_patterns(json_str: str) -> tuple[str, str, str]:
     """
     Extract include and exclude patterns from unit test configuration JSON.
 
@@ -16,7 +31,7 @@ def extract_test_patterns(json_str: str) -> tuple[str, str]:
         json_str: JSON string containing 'include' and 'exclude' keys
 
     Returns:
-        Tuple of (include_pattern, exclude_args_string)
+        Tuple of (include_pattern, exclude_args_string, nproc_per_node)
     """
     try:
         data = json.loads(json_str)
@@ -32,10 +47,13 @@ def extract_test_patterns(json_str: str) -> tuple[str, str]:
             else ""
         )
 
-        return include, exclude_args
+        nproc_per_node = data.get("nproc_per_node")
+        nproc_per_node = "" if nproc_per_node is None else str(nproc_per_node)
+
+        return include, exclude_args, nproc_per_node
     except (json.JSONDecodeError, KeyError) as e:
         sys.stderr.write(f"Error parsing test patterns: {e}\n")
-        return "*", ""
+        return "*", "", ""
 
 
 def parse_test_cases(json_str: str) -> list[tuple[str, str, str]]:
@@ -102,9 +120,10 @@ def main():
     json_input = sys.stdin.read().strip()
 
     if command == "extract-patterns":
-        include, exclude = extract_test_patterns(json_input)
+        include, exclude, nproc_per_node = extract_test_patterns(json_input)
         print(f"INCLUDE={include}")
         print(f"EXCLUDE={exclude}")
+        print(f"NPROC_PER_NODE={nproc_per_node}")
 
     elif command == "parse-test-cases":
         test_cases = parse_test_cases(json_input)

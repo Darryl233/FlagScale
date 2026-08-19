@@ -34,6 +34,7 @@ from megatron.training.global_vars import set_global_variables, set_global_write
 from megatron.training.utils import is_rank0
 from megatron.training.yaml_arguments import validate_yaml
 
+from megatron.backend_config import configure_backend_environment
 from megatron.training.arguments_fs import FSTrainArguments
 from megatron.training.global_vars import set_spiky_loss_detector
 from megatron.plugin.hetero.parallel_context import set_parallel_context
@@ -88,6 +89,8 @@ def initialize_megatron(
         )
         load_args_from_checkpoint(args, load_arg='pretrained_checkpoint')
         load_args_from_checkpoint(args)
+
+    configure_backend_environment(args)
 
     ## FlagScale Begin: Pre Validate Arguments ##
     fs_argument = FSTrainArguments(args)
@@ -499,7 +502,10 @@ def set_jit_fusion_options():
         torch._C._jit_override_can_fuse_on_cpu(True)
         torch._C._jit_override_can_fuse_on_gpu(True)
 
-    _warmup_jit_function()
+    try:
+        _warmup_jit_function()
+    except Exception as e:
+        print_rank_0(f"WARNING: JIT fusion warmup failed ({e}). Skipping fused kernel warmup.")
 
 
 def _warmup_jit_function():

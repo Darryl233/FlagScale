@@ -1,4 +1,19 @@
 #!/bin/bash
+
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # check_env.sh - Print a snapshot of the hardware/software environment.
 # Intended to run at the start of a CI job to aid debugging.
 set -eo pipefail
@@ -28,8 +43,10 @@ elif command -v mx-smi &>/dev/null; then
     mx-smi
 elif command -v npu-smi &>/dev/null; then
     npu-smi info || true
+elif command -v mthreads-gmi &>/dev/null; then
+    mthreads-gmi || true
 else
-    log_info "No GPU management tool found (nvidia-smi / mx-smi / npu-smi)"
+    log_info "No accelerator management tool found"
 fi
 
 # Show key CPU topology fields; non-fatal if lscpu is unavailable.
