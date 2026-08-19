@@ -1,9 +1,9 @@
 defaults:
   - _self_
-  - train: 35b_a3b_64k_smoke
+  - train: 35b_a3b_64k
 
 experiment:
-  exp_name: outputs_qwen35_35b_a3b_64k_smoke
+  exp_name: outputs_qwen35_35b_a3b_64k
   exp_dir: ./${experiment.exp_name}
   task:
     type: train
